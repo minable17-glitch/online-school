@@ -6,7 +6,7 @@
 //            ?room=우리학교&teacher=1  → 선생님 이름표로 입장
 import * as THREE from 'three';
 import './school.css';
-import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX } from './world.js';
+import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX, BRIDGE } from './world.js';
 import { createSoccer } from './soccer.js';
 import { createTeachers, SUBJECTS } from './teachers.js';
 import { Avatar, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } from './avatar.js';
@@ -137,9 +137,9 @@ npc.root.rotation.y = 0;
 scene.add(npc.root);
 
 // ── 급식실 조리사님 (위생모 + 앞치마) ──
-const cooks = [19.5, 25, 30.5].map((x, i) => {
+const cooks = world.cookSpots.map(({ x, z }, i) => {
   const c = new Avatar({ id: `cafe-cook-${i}`, name: '조리사님', color: '#f2f2ee', occlude: true, look: { outfit: 'navy', hair: 'bun', hairColor: 'dark', acc: 'hairnet' } });
-  c.pos.set(x, 0, -40.9);
+  c.pos.set(x, levelY(0), z);
   c.root.rotation.y = 0;
   scene.add(c.root);
   return c;
@@ -750,10 +750,10 @@ function soundMix() {
   // 점심시간엔 급식실이 시끌벅적
   const lunch = schoolNow().kind === 'lunch';
   const cafeLevel = lunch ? 1 : 0.35;
-  if (inRect(GYM, x, z)) {
+  if (inRect(GYM, x, z) && k === 1) {
     mix.gym = [1, open];
     mix.field = [0.15, muffled];
-  } else if (inRect(CAFE, x, z)) {
+  } else if (inRect(CAFE, x, z) && k === 0) {
     mix.cafe = [cafeLevel, open];
     mix.field = [0.15, muffled];
   } else if (inShop) {
@@ -765,8 +765,8 @@ function soundMix() {
     mix.corridor = [0.12, muffled];
     mix.classroom = [0.1, muffled];
     // 별관 근처에서는 체육관·급식실 소리가 벽 너머로
-    mix.gym = [Math.max(0, 1 - Math.hypot(x + 25, z + 32) / 30) * 0.5, muffled];
-    mix.cafe = [Math.max(0, 1 - Math.hypot(x - 25, z + 33) / 30) * 0.5 * cafeLevel, muffled];
+    mix.gym = [Math.max(0, 1 - Math.hypot(x - 21, z + 28) / 30) * 0.4, muffled];
+    mix.cafe = [Math.max(0, 1 - Math.hypot(x - 21, z + 28) / 30) * 0.5 * cafeLevel, muffled];
   } else {
     // 건물 안: 운동장 소리는 창문 너머로 작고 먹먹하게
     mix.field = [room ? 0.35 : 0.22, room ? 1200 : muffled];
@@ -877,8 +877,8 @@ mealBtn.addEventListener('click', () => {
 let inCafeNow = false;
 function updateAnnex() {
   const { x, z } = me.pos;
-  const g = inRect(GYM, x, z) && me.pos.y < 0.5;
-  const c = inRect(CAFE, x, z) && me.pos.y < 0.5;
+  const g = inRect(GYM, x, z) && levelOfY(me.pos.y) === 1;
+  const c = inRect(CAFE, x, z) && levelOfY(me.pos.y) === 0;
   const nearHoop = g && nearestHoop(me.pos).dist < 10;
   shootBtn.classList.toggle('hidden', !nearHoop);
   mealBtn.classList.toggle('hidden', !c);
@@ -1065,7 +1065,14 @@ function updateWhere() {
   const inBuilding = Math.abs(me.pos.x) < BX && me.pos.z < 0 && me.pos.z > Z_BACK;
   const shop = me.pos.x > STORE.minX && me.pos.x < STORE.maxX && me.pos.z > STORE.minZ && me.pos.z < STORE.maxZ;
   const onRoof = inBuilding && levelOfY(me.pos.y) === ROOF;
-  const annex = inRect(GYM, me.pos.x, me.pos.z) ? '체육관' : inRect(CAFE, me.pos.x, me.pos.z) ? '급식실' : null;
+  const lv = levelOfY(me.pos.y);
+  const annex = inRect(GYM, me.pos.x, me.pos.z)
+    ? lv === 1
+      ? '강당'
+      : '급식실'
+    : inRect(BRIDGE, me.pos.x, me.pos.z) && lv === 1
+      ? '구름다리'
+      : null;
   const w = r ? r.name : onRoof ? '옥상' : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.z < Z_BACK ? '뒷마당' : '운동장');
   if (w !== lastWhere) {
     if (r && lastWhere && !TEACHING.has(r.type)) {
@@ -1093,8 +1100,9 @@ function groundKind() {
     if (Math.abs(x) < 4.5 && z > Z_CORR && k === 0) return 'hard'; // 중앙현관
     return 'wood';
   }
-  if (inRect(GYM, x, z)) return 'wood';
-  if (inRect(CAFE, x, z) || inRect(STORE, x, z)) return 'hard';
+  if (inRect(GYM, x, z)) return k === 1 ? 'wood' : 'hard';
+  if (inRect(BRIDGE, x, z) && k === 1) return 'hard';
+  if (inRect(STORE, x, z)) return 'hard';
   if (z >= 0 && z < 15) return 'hard'; // 건물 앞 시멘트 마당
   if (z <= Z_BACK && z > -46) return 'hard'; // 뒷마당
   if (Math.abs(x) > 66 || z > 68) return 'grass';
