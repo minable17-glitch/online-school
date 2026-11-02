@@ -85,6 +85,8 @@ export const CAFE = { ...ANNEX, level: 0 };
 export const GYM = { ...ANNEX, level: 1 };
 export const BRIDGE = { minX: 10, maxX: 13, minZ: ANNEX.maxZ, maxZ: Z_BACK };
 export const CAFE_DOOR = [20, 23];
+// 정문: 동쪽 담장, 건물 앞 마당과 바로 이어짐
+export const GATE = { z1: 4, z2: 13 };
 export const HOOPS = [
   { x: ANNEX.minX + 1.65, y: levelY(1) + 3.05, z: -26.4 },
   { x: ANNEX.maxX - 1.65, y: levelY(1) + 3.05, z: -26.4 },
@@ -307,6 +309,25 @@ export function buildWorld(scene, { menu = [] } = {}) {
       g.fillStyle = 'rgba(255,255,255,0.25)';
       for (let x = 0; x < 128; x += 8) g.fillRect(x, 0, 2, 64);
     }),
+    blocks: canvasTex(128, 128, (g) => {
+      const r = rand(41);
+      const cols = ['#b9b3a6', '#c7c1b4', '#aaa498', '#b2775f', '#c3bdb0'];
+      for (let row = 0; row < 8; row++) {
+        const off = row % 2 ? 16 : 0;
+        for (let x = -1; x < 4; x++) {
+          const v = r();
+          g.fillStyle = v < 0.12 ? cols[3] : cols[Math.floor(r() * 3) === 0 ? 0 : Math.floor(r() * 3) === 1 ? 1 : 4];
+          g.fillRect(x * 32 + off + 1, row * 16 + 1, 30, 14);
+        }
+      }
+      g.strokeStyle = 'rgba(70,64,56,0.35)';
+      for (let row = 0; row <= 8; row++) {
+        g.beginPath();
+        g.moveTo(0, row * 16);
+        g.lineTo(128, row * 16);
+        g.stroke();
+      }
+    }),
     tile: canvasTex(64, 64, (g) => {
       g.fillStyle = '#f4f4f0';
       g.fillRect(0, 0, 64, 64);
@@ -341,6 +362,9 @@ export function buildWorld(scene, { menu = [] } = {}) {
     redLamp: std('#ff3b30', { emissive: '#ff2a1f', emissiveIntensity: 0.9 }),
     partition: std('#a9c2c8', { roughness: 0.9 }),
     pillarWood: std('#c8652e', { roughness: 0.6 }),
+    bronze: std('#6f5a3c', { metalness: 0.55, roughness: 0.45 }),
+    granite: std('#a7a39b', { roughness: 0.7 }),
+    wisteria: std('#9a7bd1'),
     chairDark: std('#7a3b20', { roughness: 0.45 }),
     steel: std('#c9cdd0', { metalness: 0.7, roughness: 0.3 }),
     tile: std('#ffffff', { map: tex.tile }, 3),
@@ -408,8 +432,8 @@ export function buildWorld(scene, { menu = [] } = {}) {
   flat(400, 400, tex.grass, 0, 0, 0);
   tex.dirt.repeat.set(30, 13);
   flat(137, 58, tex.dirt, 0, 0.01, 43.5); // 운동장 둘레 흙
-  tex.concrete.repeat.set(30, 4);
-  flat(137, 15, tex.concrete, 0, 0.015, 7.5); // 건물 앞 시멘트 마당
+  tex.blocks.repeat.set(137 / 1.6, 15 / 1.6);
+  flat(137, 15, tex.blocks, 0, 0.015, 7.5); // 건물 앞 마당: 보도블록
   const backTex = tex.concrete.clone();
   backTex.needsUpdate = true;
   backTex.repeat.set(30, 7);
@@ -1567,6 +1591,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
     block(0, x - 0.18, x + 0.18, z - 0.18, z + 0.18);
   };
   const tactile = (x1, x2, z1, z2) => B.box('yellow', 'deco', x1, x2, 0.025, 0.035, z1, z2);
+  const flatBlocks = (x1, x2, z1, z2) => pave(x1, x2, z1, z2, tex.blocks, 0.02, 1.6);
 
   // ── 강당동 (1층 급식실 · 2층 강당) ──
   const menuSign = { tex: null };
@@ -1845,7 +1870,140 @@ export function buildWorld(scene, { menu = [] } = {}) {
     block(0, x1 - 0.3, x2 + 0.3, z1 - 0.3, z2 + 0.3);
   }
 
-  // 점수판 (운동장 동쪽 끝, 축구 점수 표시)
+  // ── 중앙현관: 유리문(양옆 고정창) + 문턱 돌계단 + 발판 ──
+  {
+    for (const [x1, x2] of [[-2.5, -1.5], [1.5, 2.5]]) {
+      B.box('glass', 'glass', x1, x2, 0.15, 2.5, -0.15, -0.05);
+      B.box('steel', 'deco', x1, x1 + 0.06, 0.15, 2.55, -0.17, -0.03);
+      B.box('steel', 'deco', x2 - 0.06, x2, 0.15, 2.55, -0.17, -0.03);
+      block(0, x1, x2, -0.2, 0);
+    }
+    B.box('steel', 'deco', -2.5, 2.5, 2.5, 2.6, -0.17, -0.03);
+    B.box('glass', 'glass', -1.5, -0.6, 0.15, 2.5, -0.5, -0.42); // 안쪽으로 열린 문짝
+    B.box('glass', 'glass', 0.6, 1.5, 0.15, 2.5, -0.5, -0.42);
+    B.box('granite', 'deco', -3.4, 3.4, 0, 0.08, 0, 1.0);
+    B.box('leaf1', 'deco', -1.3, 1.3, 0.15, 0.17, -1.6, -0.5); // 초록 발판
+    const entSign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map: textTex(320, 80, '#f7f2e2', '#2b2b2b', ['중앙현관'], 46, '#7a5532') }));
+    entSign.position.set(0, 2.9, 0.02);
+    scene.add(entSign);
+  }
+
+  // ── 옆 출입문(계단실): 철문 틀 + 작은 차양 + 바깥 보도블록 ──
+  for (const side of [-1, 1]) {
+    const wx = side * BX;
+    const out = side; // 바깥 방향
+    B.box('steel', 'deco', wx - 0.12, wx + 0.12, 0, 2.3, -11.5, -11.38);
+    B.box('steel', 'deco', wx - 0.12, wx + 0.12, 0, 2.3, -9.62, -9.5);
+    B.box('steel', 'deco', wx - 0.12, wx + 0.12, 2.22, 2.32, -11.5, -9.5);
+    B.box('door', 'deco', wx + out * 0.12, wx + out * 0.16, 0, 2.2, -9.6, -8.7); // 바깥으로 열린 철문
+    B.box('concrete', 'wall', Math.min(wx, wx + out * 1.6), Math.max(wx, wx + out * 1.6), 2.7, 2.85, -12.2, -8.8);
+    B.box('granite', 'deco', Math.min(wx, wx + out * 1.2), Math.max(wx, wx + out * 1.2), 0, 0.06, -11.8, -9.2);
+    flatBlocks(side > 0 ? wx : wx - 5, side > 0 ? wx + 5 : wx, -14, -7);
+  }
+
+  // ── 동상: 세종대왕(앉은 모습) · 이순신(칼 든 모습), 화강암 받침대 + 둘레 화단 ──
+  const statueBase = (x, z, name) => {
+    B.box('band', 'deco', x - 1.6, x + 1.6, 0, 0.3, z - 1.6, z + 1.6);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      B.geo('shrub', 'deco', new THREE.IcosahedronGeometry(0.32, 1), x + Math.sin(a) * 1.25, 0.55, z + Math.cos(a) * 1.25);
+    }
+    B.box('granite', 'wall', x - 0.75, x + 0.75, 0.3, 1.7, z - 0.75, z + 0.75);
+    B.box('granite', 'deco', x - 0.85, x + 0.85, 1.7, 1.8, z - 0.85, z + 0.85);
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.35), new THREE.MeshBasicMaterial({ map: textTex(330, 100, '#3b3226', '#e8d8a8', [name], 52) }));
+    plaque.position.set(x, 1.0, z + 0.76);
+    scene.add(plaque);
+    block(0, x - 1.6, x + 1.6, z - 1.6, z + 1.6);
+  };
+  {
+    // 세종대왕 (서쪽)
+    const x = -13;
+    const z = 6.5;
+    statueBase(x, z, '세종대왕');
+    const y = 1.8;
+    B.box('bronze', 'deco', x - 0.55, x + 0.55, y, y + 0.55, z - 0.5, z + 0.3); // 의자
+    B.box('bronze', 'deco', x - 0.55, x + 0.55, y + 0.55, y + 1.3, z - 0.55, z - 0.4); // 등받이
+    B.geo('bronze', 'deco', new THREE.CylinderGeometry(0.32, 0.48, 0.9, 12), x, y + 0.95, z - 0.1); // 곤룡포
+    B.box('bronze', 'deco', x - 0.4, x + 0.4, y + 0.45, y + 0.6, z - 0.1, z + 0.45); // 무릎
+    B.geo('bronze', 'deco', new THREE.SphereGeometry(0.22, 14, 12), x, y + 1.6, z - 0.08);
+    B.box('bronze', 'deco', x - 0.2, x + 0.2, y + 1.72, y + 1.95, z - 0.25, z + 0.08); // 익선관
+    for (const sx of [-1, 1]) B.box('bronze', 'deco', x + sx * 0.2, x + sx * 0.32, y + 1.82, y + 1.95, z - 0.18, z - 0.12);
+    B.box('bronze', 'deco', x - 0.18, x + 0.18, y + 0.62, y + 0.66, z + 0.15, z + 0.42); // 펼친 책
+  }
+  {
+    // 이순신 (동쪽)
+    const x = 13;
+    const z = 6.5;
+    statueBase(x, z, '충무공 이순신');
+    const y = 1.8;
+    for (const sx of [-1, 1]) B.box('bronze', 'deco', x + sx * 0.15 - 0.1, x + sx * 0.15 + 0.1, y, y + 0.8, z - 0.1, z + 0.12);
+    B.geo('bronze', 'deco', new THREE.CylinderGeometry(0.28, 0.42, 0.95, 12), x, y + 1.15, z); // 갑옷
+    B.box('bronze', 'deco', x - 0.45, x + 0.45, y + 1.5, y + 1.62, z - 0.15, z + 0.15); // 어깨
+    B.geo('bronze', 'deco', new THREE.SphereGeometry(0.2, 14, 12), x, y + 1.85, z);
+    B.geo('bronze', 'deco', new THREE.ConeGeometry(0.24, 0.35, 12), x, y + 2.12, z); // 투구
+    B.geo('bronze', 'deco', new THREE.CylinderGeometry(0.3, 0.3, 0.04, 14), x, y + 1.96, z);
+    B.box('bronze', 'deco', x - 0.03, x + 0.03, y + 0.2, y + 1.55, z + 0.32, z + 0.38); // 장검
+    B.box('bronze', 'deco', x - 0.12, x + 0.12, y + 1.25, y + 1.3, z + 0.3, z + 0.4);
+    B.geo('bronze', 'deco', new THREE.CylinderGeometry(0.4, 0.55, 0.05, 14), x, y + 0.02, z);
+  }
+
+  // ── 등나무 쉼터 (나무 퍼걸러 + 보라색 꽃송이 + 벤치) ──
+  {
+    const x1 = -44;
+    const x2 = -34;
+    const z1 = 3.5;
+    const z2 = 9.5;
+    for (const x of [x1, (x1 + x2) / 2, x2]) for (const z of [z1, z2]) {
+      B.box('trunk', 'deco', x - 0.12, x + 0.12, 0, 2.6, z - 0.12, z + 0.12);
+      block(0, x - 0.2, x + 0.2, z - 0.2, z + 0.2);
+    }
+    for (const z of [z1, z2]) B.box('trunk', 'deco', x1 - 0.4, x2 + 0.4, 2.6, 2.8, z - 0.1, z + 0.1);
+    for (let x = x1; x <= x2 + 0.01; x += 0.6) B.box('trunk', 'deco', x - 0.05, x + 0.05, 2.8, 2.9, z1 - 0.5, z2 + 0.5);
+    for (let i = 0; i < 14; i++) {
+      const lx = x1 + 0.6 + ((i * 7) % 14) * ((x2 - x1 - 1.2) / 13);
+      const lz = z1 + 0.6 + ((i * 3) % 5) * ((z2 - z1 - 1.2) / 4);
+      const leaf = new THREE.IcosahedronGeometry(0.9, 1);
+      leaf.scale(1.2, 0.45, 1.2);
+      B.geo(i % 3 ? 'leaf2' : 'leaf1', 'deco', leaf, lx, 3.1, lz);
+      B.geo('wisteria', 'deco', new THREE.ConeGeometry(0.16, 0.6, 8).rotateX(Math.PI), lx + 0.4, 2.45, lz + 0.2);
+      B.geo('wisteria', 'deco', new THREE.ConeGeometry(0.13, 0.5, 8).rotateX(Math.PI), lx - 0.3, 2.5, lz - 0.3);
+    }
+    for (const bz of [z1 + 1.2, z2 - 1.2]) {
+      B.box('chair', 'deco', x1 + 1, x2 - 1, 0.45, 0.5, bz - 0.3, bz + 0.3);
+      for (const bx of [x1 + 1.2, (x1 + x2) / 2, x2 - 1.2]) B.box('metal', 'deco', bx - 0.05, bx + 0.05, 0, 0.45, bz - 0.25, bz + 0.25);
+      block(0, x1 + 1, x2 - 1, bz - 0.3, bz + 0.3);
+    }
+  }
+
+  // ── 스탠드 지붕 (아치형 반투명 지붕 + 나무 기둥) ──
+  {
+    archRoof('z', 18, 64, -54.5, { R: 5.6, post: 3.4, flat: 0.32, rib: 4.6 });
+    for (let z = 18; z <= 64.01; z += 4.6) {
+      woodPost(-49.4, z, 3.4);
+      woodPost(-59.6, z, 3.4);
+    }
+  }
+
+  // ── 경비실 (정문 안쪽) ──
+  {
+    const x1 = 61;
+    const x2 = 64.6;
+    const z1 = GATE.z2 + 1.5;
+    const z2 = GATE.z2 + 4.5;
+    B.box('band', 'wall', x1, x2, 0, 0.9, z1, z2);
+    B.box('cream', 'wall', x1, x2, 0.9, 1.2, z1, z2);
+    B.box('glass', 'glass', x1 - 0.02, x2 + 0.02, 1.2, 2.2, z1 + 0.15, z2 - 0.15);
+    B.box('cream', 'wall', x1, x2, 2.2, 2.7, z1, z2);
+    for (const [cx, cz] of [[x1, z1], [x2, z1], [x1, z2], [x2, z2]]) B.box('cream', 'wall', cx - 0.12, cx + 0.12, 0.9, 2.2, cz - 0.12, cz + 0.12);
+    B.box('blueRoof', 'wall', x1 - 0.4, x2 + 0.4, 2.7, 2.9, z1 - 0.4, z2 + 0.4);
+    const gsign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.3), new THREE.MeshBasicMaterial({ map: textTex(240, 60, '#2f5aa8', '#ffffff', ['경비실'], 40) }));
+    gsign.rotation.y = Math.PI / 2;
+    gsign.position.set(x2 + 0.02, 2.45, (z1 + z2) / 2);
+    scene.add(gsign);
+    block(0, x1, x2, z1, z2);
+  }
+
+
   const scoreC = document.createElement('canvas');
   scoreC.width = 512;
   scoreC.height = 200;
@@ -1892,7 +2050,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
   for (let x = -64; x <= 64; x += 8) if (Math.abs(x) > 8) tree(x, 69.5, ti++);
   for (let z = 6; z <= 64; z += 8) {
     tree(-66, z, ti++);
-    tree(66, z, ti++);
+    if (z > GATE.z2 + 6) tree(66, z, ti++);
   }
   // 담장 + 정문
   const wallSeg = (x1, x2, z1, z2) => {
@@ -1901,19 +2059,26 @@ export function buildWorld(scene, { menu = [] } = {}) {
     if (thinX) B.box('fence', 'deco', (x1 + x2) / 2 - 0.02, (x1 + x2) / 2 + 0.02, 0.9, 2.0, z1, z2);
     else B.box('fence', 'deco', x1, x2, 0.9, 2.0, (z1 + z2) / 2 - 0.02, (z1 + z2) / 2 + 0.02);
   };
-  wallSeg(-69.5, -5.5, 73, 73.4);
-  wallSeg(5.5, 69.5, 73, 73.4);
+  wallSeg(-69.5, 69.5, 73, 73.4);
   wallSeg(-69.5, -69.1, -46, 73.4);
-  wallSeg(69.1, 69.5, -46, 73.4);
+  wallSeg(69.1, 69.5, -46, GATE.z1);
+  wallSeg(69.1, 69.5, GATE.z2, 73.4);
   wallSeg(-69.5, 69.5, -46.4, -46);
-  for (const gx of [-5.5, 5.5]) B.box('band', 'deco', gx - 0.5, gx + 0.5, 0, 2.8, 72.7, 73.7);
-  const gateSign = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.8, 2),
-    new THREE.MeshBasicMaterial({ map: textTex(128, 320, '#f0ead8', '#2b2b2b', ['온', '라', '인', '중', '학', '교'], 44) }),
+  // 정문: 벽돌 기둥 + 학교 이름 현판 + 옆으로 밀어 열린 철제 미닫이 교문 + 바닥 레일
+  for (const gz of [GATE.z1 - 0.5, GATE.z2 + 0.5]) B.box('band', 'deco', 68.7, 70.0, 0, 2.9, gz - 0.55, gz + 0.55);
+  for (const gz of [GATE.z1 - 0.5, GATE.z2 + 0.5]) B.box('granite', 'deco', 68.6, 70.1, 2.9, 3.05, gz - 0.65, gz + 0.65);
+  const gateName = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.85, 2.2),
+    new THREE.MeshBasicMaterial({ map: textTex(128, 330, '#f0ead8', '#2b2b2b', ['온', '라', '인', '중', '학', '교'], 44), side: THREE.DoubleSide }),
   );
-  gateSign.position.set(-5.5, 1.5, 72.68);
-  gateSign.rotation.y = Math.PI;
-  scene.add(gateSign);
+  gateName.rotation.y = -Math.PI / 2;
+  gateName.position.set(68.68, 1.55, GATE.z1 - 0.5);
+  scene.add(gateName);
+  B.box('metal', 'deco', 69.2, 69.4, 0, 0.04, GATE.z1, GATE.z2);
+  B.box('fence', 'deco', 69.25, 69.35, 0.1, 1.9, GATE.z2 + 1.1, GATE.z2 + 5.5);
+  B.box('fence', 'deco', 69.22, 69.38, 1.75, 1.85, GATE.z2 + 1.1, GATE.z2 + 5.5);
+  for (let z = GATE.z2 + 1.2; z < GATE.z2 + 5.5; z += 0.18) B.box('fence', 'deco', 69.27, 69.33, 0.1, 1.85, z - 0.02, z + 0.02);
+  for (const gz of [GATE.z2 + 1.4, GATE.z2 + 5.2]) B.geo('tv', 'deco', new THREE.CylinderGeometry(0.08, 0.08, 0.06, 12).rotateZ(Math.PI / 2), 69.3, 0.08, gz);
 
   const built = B.build(scene, mats);
   walkables.push(...built.floor);
