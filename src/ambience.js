@@ -1,7 +1,7 @@
 // 장소마다 들리는 주변 소리 (운동장 / 교실 / 복도 / 교무실 / 도서실 / 바깥 새소리)
 // 음원 파일 없이 브라우저에서 직접 합성합니다.
 // main.js 가 내 위치에 따라 setMix() 로 각 장소 소리의 크기와 '벽 너머로 먹먹하게' 정도를 정해줍니다.
-import { ac } from './audio.js';
+import { ac, setBellSample } from './audio.js';
 
 export function createAmbience() {
   const c = ac();
@@ -48,7 +48,7 @@ export function createAmbience() {
       send.gain.value = wet;
       lp.connect(send).connect(reverb);
     }
-    buses[name] = { input, gain, lp, level: 0 };
+    buses[name] = { input, gain, lp, level: 0, sample: false };
   }
 
   const now = () => c.currentTime;
@@ -421,7 +421,7 @@ export function createAmbience() {
   const officeVoice = makeVoice(buses.office.input, { f0lo: 130, f0hi: 240, level: 0.02, pause: 0.5 });
 
   const events = [
-    { bus: 'field', every: [1.2, 3.5], fn: (d, t) => shout(d, t, Math.random() < 0.35) },
+    { bus: 'field', every: [1.2, 3.5], fn: (d, t) => shout(d, t, Math.random() < 0.35), voice: true },
     { bus: 'field', every: [2.5, 6], fn: ballKick },
     { bus: 'field', every: [14, 28], fn: whistle },
     { bus: 'outdoor', every: [3, 8], fn: bird },
@@ -430,35 +430,74 @@ export function createAmbience() {
     { bus: 'classroom', every: [8, 20], fn: chairScrape },
     { bus: 'classroom', every: [4, 9], fn: pencil },
     { bus: 'corridor', every: [5, 12], fn: footsteps },
-    { bus: 'corridor', every: [8, 16], fn: (d, t) => shout(d, t, true) },
+    { bus: 'corridor', every: [8, 16], fn: (d, t) => shout(d, t, true), voice: true },
     { bus: 'office', every: [18, 35], fn: phone },
     { bus: 'office', every: [4, 9], fn: typing },
     { bus: 'library', every: [3, 8], fn: page },
     { bus: 'music', every: [3, 6], fn: pianoTune },
     { bus: 'gym', every: [1.5, 4], fn: dribble },
     { bus: 'gym', every: [1.5, 5], fn: squeak },
-    { bus: 'gym', every: [3, 7], fn: (d, t) => shout(d, t, Math.random() < 0.4) },
+    { bus: 'gym', every: [3, 7], fn: (d, t) => shout(d, t, Math.random() < 0.4), voice: true },
     { bus: 'gym', every: [18, 35], fn: whistle },
     { bus: 'cafe', every: [0.4, 1.5], fn: clink },
     { bus: 'cafe', every: [3, 7], fn: trayClatter },
-    { bus: 'cafe', every: [4, 9], fn: (d, t) => shout(d, t, true) },
+    { bus: 'cafe', every: [4, 9], fn: (d, t) => shout(d, t, true), voice: true },
   ].map((e) => ({ ...e, next: 0 }));
 
   let started = false;
   let timer = null;
   function loop() {
     const t = now() + 0.05;
-    if (buses.field.level > 0.01) fieldVoices.forEach((v) => v.tick(t));
-    if (buses.teacher.level > 0.01) teacher.tick(t);
-    if (buses.classroom.level > 0.01) whisper.forEach((v) => v.tick(t));
-    if (buses.corridor.level > 0.01) corridorVoice.tick(t);
-    if (buses.office.level > 0.01) officeVoice.tick(t);
-    if (buses.gym.level > 0.01) gymVoices.forEach((v) => v.tick(t));
-    if (buses.cafe.level > 0.01) cafeVoices.forEach((v) => v.tick(t));
+    // 진짜 녹음 파일이 있는 장소는 합성 말소리를 끔
+    const live = (b) => buses[b].level > 0.01 && !buses[b].sample;
+    if (live('field')) fieldVoices.forEach((v) => v.tick(t));
+    if (live('teacher')) teacher.tick(t);
+    if (live('classroom')) whisper.forEach((v) => v.tick(t));
+    if (live('corridor')) corridorVoice.tick(t);
+    if (live('office')) officeVoice.tick(t);
+    if (live('gym')) gymVoices.forEach((v) => v.tick(t));
+    if (live('cafe')) cafeVoices.forEach((v) => v.tick(t));
     for (const e of events) {
       if (t < e.next) continue;
       e.next = t + R(e.every[0], e.every[1]);
-      if (buses[e.bus].level > 0.01) e.fn(buses[e.bus].input, t + Math.random() * 0.3);
+      const b = buses[e.bus];
+      if (b.level > 0.01 && !(e.voice && b.sample)) e.fn(b.input, t + Math.random() * 0.3);
+    }
+  }
+
+  // public/sounds/sounds.json 에 적힌 녹음 파일을 불러와 장소별로 계속 반복 재생
+  async function loadSamples() {
+    const base = `${import.meta.env.BASE_URL}sounds/`;
+    let map = {};
+    try {
+      const res = await fetch(`${base}sounds.json`, { cache: 'no-cache' });
+      if (res.ok) map = await res.json();
+    } catch {
+      return;
+    }
+    for (const [name, file] of Object.entries(map)) {
+      if (typeof file !== 'string' || !file) continue;
+      try {
+        const res = await fetch(base + encodeURIComponent(file));
+        if (!res.ok) continue;
+        const buf = await c.decodeAudioData(await res.arrayBuffer());
+        if (name === 'bell') {
+          setBellSample(buf);
+          continue;
+        }
+        const bus = buses[name];
+        if (!bus) continue;
+        const src = c.createBufferSource();
+        src.buffer = buf;
+        src.loop = true;
+        const g = c.createGain();
+        g.gain.value = 0.8;
+        src.connect(g).connect(bus.input);
+        src.start(0, Math.random() * buf.duration);
+        bus.sample = true;
+      } catch {
+        /* 파일이 이상하면 합성 소리 그대로 */
+      }
     }
   }
 
@@ -467,6 +506,7 @@ export function createAmbience() {
       if (started) return;
       started = true;
       timer = setInterval(loop, 50);
+      loadSamples();
     },
     // mix: { field: [크기, 먹먹함Hz], ... }
     setMix(mix) {

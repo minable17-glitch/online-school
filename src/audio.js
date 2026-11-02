@@ -33,9 +33,45 @@ function bellNote(c, freq, start, vol, out) {
 }
 
 // 학교 종소리 (딩-동-댕-동 / 딩-동-댕-동) 를 반복 재생. stop 함수를 반환.
+// 진짜 학교 종소리 녹음 파일 (있으면 이걸로 재생)
+let bellSample = null;
+export function setBellSample(buf) {
+  bellSample = buf;
+}
+
 export function playSchoolBell(loop = true) {
   const c = ac();
   if (!c) return () => {};
+  if (bellSample) {
+    const g = c.createGain();
+    g.gain.value = 0.8;
+    g.connect(c.destination);
+    let stopped = false;
+    let src = null;
+    let timer = null;
+    const once = () => {
+      if (stopped) return;
+      src = c.createBufferSource();
+      src.buffer = bellSample;
+      src.connect(g);
+      src.start();
+      if (loop) timer = setTimeout(once, (bellSample.duration + 3) * 1000);
+    };
+    once();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      g.gain.setTargetAtTime(0, c.currentTime, 0.2);
+      setTimeout(() => {
+        try {
+          src?.stop();
+        } catch {
+          /* 이미 끝남 */
+        }
+        g.disconnect();
+      }, 1200);
+    };
+  }
   const out = c.createGain();
   out.gain.value = 0.5;
   out.connect(c.destination);
