@@ -920,7 +920,8 @@ mealBtn.addEventListener('click', () => {
   ambience?.ding();
   me.showEmoji('🍱', 30);
   me.say('잘 먹겠습니다!');
-  cook.say(['맛있게 먹어라~', '남기지 말고~', '많이 먹어!'][Math.floor(Math.random() * 3)]);
+  if (inCafeNow) cook.say(['맛있게 먹어라~', '남기지 말고~', '많이 먹어!'][Math.floor(Math.random() * 3)]);
+  else hint('급식 당번이 식판에 담아 줬어요 🍚', 2500);
   hint(`오늘의 급식: ${todayMenu().join(' · ')}`, 4000);
   net.send('act', { type: 'meal' });
 });
@@ -932,7 +933,10 @@ function updateAnnex() {
   const nh = nearestHoop(me.pos);
   const nearHoop = nh.dist < 10 && (g || (HOOPS[nh.index].outdoor && levelOfY(me.pos.y) === 0));
   shootBtn.classList.toggle('hidden', !nearHoop);
-  mealBtn.classList.toggle('hidden', !c);
+  // 점심시간엔 복도 급식차 옆에서도 급식 받기 (교실 배식)
+  const lv = levelOfY(me.pos.y);
+  const nearCart = schoolNow().kind === 'lunch' && world.carts.some((ct) => ct.level === lv && Math.hypot(ct.x - x, ct.z - z) < 2.2);
+  mealBtn.classList.toggle('hidden', !(c || nearCart));
   if (c && !inCafeNow) cook.say(`오늘은 ${todayMenu()[2]}다~ 줄 서라~`);
   inCafeNow = c;
 }

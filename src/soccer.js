@@ -4,7 +4,7 @@
 // - 동쪽 골대에 들어가면 청팀, 서쪽 골대에 들어가면 백팀 득점
 //   (점수는 마지막으로 찬 사람이 올리고 모두에게 알려서, 두 번 올라가지 않게 함)
 import * as THREE from 'three';
-import { PITCH } from './world.js';
+import { PITCH, FIELD_Y } from './world.js';
 
 const R = 0.22;
 const CENTER = { x: 0, z: 41 };
@@ -157,7 +157,7 @@ export function createSoccer({ scene, myId, send, drawScore, onGoal, onKickSound
     }
 
     // 내가 공에 닿으면 차기
-    if (!locked() && me.pos.y < 0.5) {
+    if (!locked() && Math.abs(me.pos.y - FIELD_Y) < 0.5) {
       const dx = b.x - me.pos.x;
       const dz = b.z - me.pos.z;
       const d = Math.hypot(dx, dz);
@@ -172,7 +172,7 @@ export function createSoccer({ scene, myId, send, drawScore, onGoal, onKickSound
       }
     }
 
-    mesh.position.set(b.x, R + 0.02, b.z);
+    mesh.position.set(b.x, FIELD_Y + R + 0.02, b.z);
   }
 
   return {
