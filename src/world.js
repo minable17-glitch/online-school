@@ -726,9 +726,30 @@ export function buildWorld(scene, { menu = [] } = {}) {
     }
   };
   // 창가 노란 커튼 (위 주름 + 양쪽으로 묶인 커튼)
+  // 창가 노란 커튼: 커튼봉 + 주름 장식 + 창틀마다 주름지게 묶인 커튼 (그 시절 교실)
+  const pleats = (cx, w, y1, y2, n = 6) => {
+    for (let i = 0; i < n; i++) {
+      const a = cx - w / 2 + (w * i) / n;
+      const deep = i % 2 === 0;
+      B.box('curtain', 'deco', a, a + w / n + 0.01, y1, y2, deep ? -0.44 : -0.38, deep ? -0.3 : -0.26);
+    }
+  };
   const curtains = (xs, xe, L) => {
-    B.box('curtain', 'deco', xs + 0.15, xe - 0.15, L + 2.55, L + 2.95, -0.45, -0.23);
-    for (const [a, b] of [[xs + 0.15, xs + 0.55], [xe - 0.55, xe - 0.15]]) B.box('curtain', 'deco', a, b, L + 0.95, L + 2.55, -0.42, -0.25);
+    B.box('metal', 'deco', xs + 0.15, xe - 0.15, L + 2.78, L + 2.81, -0.34, -0.31);
+    // 위 주름 장식 (발란스)
+    const vn = Math.round((xe - xs - 0.3) / 0.18);
+    for (let i = 0; i < vn; i++) {
+      const a = xs + 0.15 + i * ((xe - xs - 0.3) / vn);
+      B.box('curtain', 'deco', a, a + (xe - xs - 0.3) / vn + 0.01, L + 2.62, L + 3.02, i % 2 ? -0.46 : -0.41, i % 2 ? -0.3 : -0.25);
+    }
+    // 창틀마다 양쪽으로 모아 묶은 커튼
+    const panes = Math.max(1, Math.round((xe - xs) / 1.5));
+    for (let i = 0; i <= panes; i++) {
+      const cx = Math.min(xe - 0.42, Math.max(xs + 0.42, xs + ((xe - xs) * i) / panes));
+      const w = i === 0 || i === panes ? 0.55 : 0.7;
+      pleats(cx, w, L + 0.85, L + 2.62);
+      B.box('yellow', 'deco', cx - w / 2 - 0.02, cx + w / 2 + 0.02, L + 1.45, L + 1.5, -0.46, -0.24); // 묶은 끈
+    }
   };
   // 사무용 책상 + 브라운관 모니터 (모니터는 앉은 사람 쪽을 봄: facing = +1 이면 +x 쪽 사람)
   const officeDesk = (k, L, x1, x2, z1, z2, monitorX, monitorZ, facing) => {

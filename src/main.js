@@ -794,8 +794,14 @@ function soundMix() {
       if (k === musicRoom.level && teachers.subjectOf(musicRoom)) mix.music = [Math.max(0, 1 - Math.abs((musicRoom.xs + musicRoom.xe) / 2 - x) / 25) * 0.6, 1200];
     }
   }
-  // 교실·복도·사무실은 조용하게 (효과음 없음)
+  // 교실·복도·사무실은 합성 소리 없이.
+  // 쉬는 시간·점심시간엔 교실·복도에 웅성웅성 (녹음 파일 'classroom' 이 있을 때만), 수업 시간엔 조용
   for (const key of ['classroom', 'teacher', 'corridor', 'office', 'library']) delete mix[key];
+  const rest = schoolNow().kind !== 'class';
+  if (rest && inBuilding) {
+    if (room && TEACHING.has(room.type)) mix.classroom = [0.7, open];
+    else if (!room) mix.classroom = [0.45, 1600]; // 복도: 옆 교실들 웅성거림이 벽 너머로
+  }
   return mix;
 }
 
