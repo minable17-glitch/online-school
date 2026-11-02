@@ -509,26 +509,7 @@ function handleTap(cx, cy) {
       }
     });
     if (idx < 0) return;
-    const taker = chairTakenBy(idx);
-    if (taker && taker !== me) return hint('이미 친구가 앉아 있어요');
-    if (taker === me) return;
-    const c = world.chairs[idx];
-    pendingChair = idx;
-    const dest = { x: c.x, y: c.seatY - 0.45, z: c.z };
-    me.finalDest = dest;
-    if (walkTo(me, dest, idx)) {
-      const done = me.onArrive;
-      if (done) {
-        me.onArrive = () => {
-          done();
-          pendingChair = null;
-          me.finalDest = null;
-          announce();
-        };
-      }
-      announce();
-    } else hint('그 자리로 갈 수 없어요');
-    return;
+    return sitAt(idx);
   }
 
   // 계단을 눌렀나? → 한 층 올라가거나 내려가기
@@ -564,6 +545,68 @@ function handleTap(cx, cy) {
   if (nav.blockedAt(p.x, p.z, p.y)) return hint('가까운 빈 바닥을 눌러주세요');
   goTo({ x: p.x, y: p.y, z: p.z }, levelOfY(p.y));
 }
+
+// idx 번 의자로 가서 앉기
+function sitAt(idx) {
+  const taker = chairTakenBy(idx);
+  if (taker && taker !== me) return hint('이미 친구가 앉아 있어요');
+  if (taker === me) return;
+  const c = world.chairs[idx];
+  pendingChair = idx;
+  const dest = { x: c.x, y: c.seatY - 0.45, z: c.z };
+  me.finalDest = dest;
+  if (walkTo(me, dest, idx)) {
+    const done = me.onArrive;
+    if (done) {
+      me.onArrive = () => {
+        done();
+        pendingChair = null;
+        me.finalDest = null;
+        ambience?.chairCreak(1);
+        announce();
+      };
+    }
+    announce();
+  } else hint('그 자리로 갈 수 없어요');
+}
+
+// ── 의자 근처: 앉기 / 일어나기 버튼 ──
+const sitBtn = document.getElementById('sitBtn');
+let nearChair = -1;
+function updateSitBtn() {
+  if (me.sitChairIndex != null) {
+    nearChair = -1;
+    sitBtn.textContent = '🧍 일어나기';
+    sitBtn.classList.remove('hidden');
+    return;
+  }
+  nearChair = -1;
+  if (!me.target) {
+    let best = 1.4;
+    const k = levelOfY(me.pos.y);
+    world.chairs.forEach((c, i) => {
+      if ((c.level ?? 0) !== k || Math.abs(c.x - me.pos.x) > best || Math.abs(c.z - me.pos.z) > best) return;
+      const d = Math.hypot(c.x - me.pos.x, c.z - me.pos.z);
+      if (d < best && !chairTakenBy(i)) {
+        best = d;
+        nearChair = i;
+      }
+    });
+  }
+  sitBtn.textContent = '🪑 앉기';
+  sitBtn.classList.toggle('hidden', nearChair < 0);
+}
+sitBtn.addEventListener('click', () => {
+  unlockAudio();
+  if (me.sitChairIndex != null) {
+    standUp(me);
+    ambience?.chairCreak(0.6);
+    announce();
+    updateSitBtn();
+    return;
+  }
+  if (nearChair >= 0) sitAt(nearChair);
+});
 
 // 목적지로 걸어가기 (층이 다르면 계단으로)
 function goTo(dest, level) {
@@ -1032,6 +1075,41 @@ function updateWhere() {
   }
 }
 
+// ── 발소리 · 미닫이문 소리 ──
+let lastStep = 0;
+let prevPos = null;
+function groundKind() {
+  const { x, y, z } = me.pos;
+  const k = levelOfY(y);
+  if (Math.abs(x) < BX && z < 0 && z > Z_BACK) {
+    if (k === ROOF) return 'hard';
+    if (STAIRS.some((t) => x > t.xs && x < t.xe && z > Z_CORR)) return 'hard';
+    if (Math.abs(x) < 4.5 && z > Z_CORR && k === 0) return 'hard'; // 중앙현관
+    return 'wood';
+  }
+  if (inRect(GYM, x, z)) return 'wood';
+  if (inRect(CAFE, x, z) || inRect(STORE, x, z)) return 'hard';
+  if (z >= 0 && z < 15) return 'hard'; // 건물 앞 시멘트 마당
+  if (z <= Z_BACK && z > -46) return 'hard'; // 뒷마당
+  if (Math.abs(x) > 66 || z > 68) return 'grass';
+  return 'dirt';
+}
+function stepSounds() {
+  // 걸음 박자에 맞춰 한 발씩
+  const n = Math.floor(me.walkPhase / Math.PI);
+  if (n !== lastStep) {
+    lastStep = n;
+    if (me.speed > 0.5 && !me.sitChair) ambience?.step(groundKind(), 1);
+  }
+  // 교실 문(복도 ↔ 교실 경계)을 지나가면 드르륵
+  const p = me.pos;
+  if (prevPos && (prevPos.z - Z_CORR) * (p.z - Z_CORR) < 0 && Math.abs(p.x) < BX) {
+    const r = roomAt(p.x, Math.max(p.z, prevPos.z), p.y);
+    if (r && levelOfY(p.y) < ROOF) ambience?.slideDoor(1);
+  }
+  prevPos = { x: p.x, y: p.y, z: p.z };
+}
+
 // ── 매 프레임 ──
 const clock = new THREE.Clock();
 let whereT = 0;
@@ -1042,6 +1120,7 @@ function frame() {
   npc.update(dt, () => 0);
   for (const c of cooks) c.update(dt, () => 0);
   updateShots(dt);
+  stepSounds();
   teachers.update(dt, me, roomAt(me.pos.x, me.pos.z, me.pos.y)?.id, camera.position);
   soccer.update(dt, me, !!me.target);
   world.update(clock.elapsedTime);
@@ -1057,6 +1136,7 @@ function frame() {
     updateStore();
     updateAnnex();
     updateStairBar();
+    updateSitBtn();
     teachers.sync(me);
     scorePill.classList.toggle('hidden', lastWhere !== '운동장');
     ambience?.setMix(soundMix());

@@ -279,3 +279,13 @@ button { font: inherit; cursor: pointer; }
   gap: 10px;
 }
 .stair-bar .pill { background: rgba(63, 126, 78, 0.88); font-size: 16px; font-weight: 600; padding: 11px 18px; }
+
+.sit-btn {
+  position: fixed;
+  right: 14px;
+  bottom: calc(env(safe-area-inset-bottom) + 104px);
+  background: rgba(122, 74, 42, 0.9);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 18px;
+}

@@ -521,6 +521,79 @@ export function createAmbience() {
       }
     },
     // 공 차는 소리 (가까울수록 크게)
+    // 내 발소리: 바닥마다 다르게 (wood: 나무 마루, dirt: 흙, hard: 시멘트·인조석, grass: 잔디)
+    step(kind = 'wood', vol = 1) {
+      const t = now();
+      const v = 0.6 * vol;
+      if (kind === 'wood') {
+        const o = c.createOscillator();
+        o.frequency.setValueAtTime(R(170, 210), t);
+        o.frequency.exponentialRampToValueAtTime(90, t + 0.06);
+        const g = c.createGain();
+        env(g, t, 0.12 * v, 0.002, 0.09);
+        o.connect(g).connect(master);
+        o.start(t);
+        o.stop(t + 0.12);
+        noiseHit(master, t, { freq: R(900, 1300), q: 2, peak: 0.05 * v, d: 0.03 });
+      } else if (kind === 'dirt') {
+        noiseHit(master, t, { type: 'bandpass', freq: R(2500, 4000), q: 0.8, peak: 0.07 * v, a: 0.01, d: 0.09 });
+        noiseHit(master, t + 0.02, { type: 'lowpass', freq: 500, peak: 0.05 * v, d: 0.05 });
+      } else if (kind === 'grass') {
+        noiseHit(master, t, { type: 'bandpass', freq: R(3000, 5000), q: 0.6, peak: 0.035 * v, a: 0.02, d: 0.1 });
+      } else {
+        noiseHit(master, t, { freq: R(1800, 2400), q: 3, peak: 0.08 * v, d: 0.025 });
+        noiseHit(master, t, { type: 'lowpass', freq: 300, peak: 0.05 * v, d: 0.04 });
+      }
+    },
+    // 미닫이문 드르륵
+    slideDoor(vol = 1) {
+      const t = now();
+      const src = c.createBufferSource();
+      src.buffer = noise;
+      const f = c.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.setValueAtTime(380, t);
+      f.frequency.linearRampToValueAtTime(520, t + 0.55);
+      f.Q.value = 1.4;
+      const am = c.createGain();
+      const lfo = c.createOscillator();
+      lfo.type = 'square';
+      lfo.frequency.value = 26;
+      const depth = c.createGain();
+      depth.gain.value = 0.5;
+      lfo.connect(depth).connect(am.gain);
+      am.gain.value = 0.5;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.22 * vol, t + 0.05);
+      g.gain.setValueAtTime(0.22 * vol, t + 0.45);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+      src.connect(f).connect(am).connect(g).connect(master);
+      src.start(t, Math.random());
+      lfo.start(t);
+      src.stop(t + 0.7);
+      lfo.stop(t + 0.7);
+      // 끝에 '탁' 하고 멈추는 소리
+      noiseHit(master, t + 0.58, { type: 'lowpass', freq: 400, peak: 0.12 * vol, d: 0.06 });
+    },
+    // 의자 앉을 때 끼익
+    chairCreak(vol = 1) {
+      const t = now();
+      const o = c.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(R(500, 650), t);
+      o.frequency.linearRampToValueAtTime(R(380, 450), t + 0.25);
+      const f = c.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 1200;
+      f.Q.value = 4;
+      const g = c.createGain();
+      env(g, t, 0.05 * vol, 0.03, 0.25);
+      o.connect(f).connect(g).connect(master);
+      o.start(t);
+      o.stop(t + 0.32);
+      noiseHit(master, t + 0.05, { type: 'lowpass', freq: 250, peak: 0.1 * vol, d: 0.08 });
+    },
     kick(vol = 1) {
       if (vol < 0.03) return;
       const g = c.createGain();
