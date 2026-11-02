@@ -70,6 +70,13 @@ export const SUBJECTS = {
     lines: ['바늘 조심~ 손가락 찔린다!', '재봉틀 천천히 밟아라~', '실 매듭 잘 지었네!', '다 하면 정리 정돈~'],
     greet: '앞치마 입고 모둠별로 앉자~',
   },
+  영어: {
+    name: '영어 선생님',
+    look: { outfit: 'wine', hair: 'long', hairColor: 'brown', acc: 'glasses' },
+    boards: ['English · Greetings\nHow are you?\nI\'m fine, thank you.', 'English · Lesson 3\nWhat time is it?\nIt\'s 9 o\'clock.'],
+    lines: ['Repeat after me~', '단어 시험 다음 시간!', '발음 또박또박~', 'Good job! 박수~'],
+    greet: 'Hello! Sit down, please~',
+  },
 };
 
 // 늘 자리에 계신 분들 (교장실·행정실·교무실·보건실)
@@ -127,6 +134,7 @@ export function subjectOf(room, period = schoolNow()) {
   if (room.type === 'science') return '과학';
   if (room.type === 'computer') return '정보';
   if (room.type === 'homeec') return '가정';
+  if (room.type === 'english') return '영어';
   if (room.type !== 'class') return null;
   return ['수학', '국어', null][hash(`${room.id}|${period.key}`) % 3];
 }

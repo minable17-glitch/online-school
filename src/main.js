@@ -928,7 +928,8 @@ function updateAnnex() {
   const { x, z } = me.pos;
   const g = inRect(GYM, x, z) && levelOfY(me.pos.y) === 1;
   const c = inRect(CAFE, x, z) && levelOfY(me.pos.y) === 0;
-  const nearHoop = g && nearestHoop(me.pos).dist < 10;
+  const nh = nearestHoop(me.pos);
+  const nearHoop = nh.dist < 10 && (g || (HOOPS[nh.index].outdoor && levelOfY(me.pos.y) === 0));
   shootBtn.classList.toggle('hidden', !nearHoop);
   mealBtn.classList.toggle('hidden', !c);
   if (c && !inCafeNow) cook.say(`오늘은 ${todayMenu()[2]}다~ 줄 서라~`);

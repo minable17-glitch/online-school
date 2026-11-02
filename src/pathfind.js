@@ -1,6 +1,6 @@
 // 길찾기: 층마다 격자를 만들어 장애물(책상·벽·나무…)을 피하고,
 // 다른 층으로 갈 때는 가까운 계단을 골라 오르내립니다.
-import { NAV_BOUNDS, STAIRS, LEVELS, levelY, levelOfY } from './world.js';
+import { NAV_BOUNDS, STAIRS, CSTAIR, LEVELS, levelY, levelOfY } from './world.js';
 
 const CELL = 0.5;
 const RADIUS = 0.2; // 아바타 몸 두께
@@ -182,6 +182,23 @@ export function createNavigator(blocksPerLevel) {
   // 계단 한 번 오르기(k → k+1) 경로점. 내려갈 땐 거꾸로.
   function stairPoints(st, k, up) {
     const L = levelY(k);
+    if (st.center) {
+      // 중앙 계단: 복도 → 서쪽 끝 → 첫 단(동쪽으로) → 층계참 → 둘째 단(서쪽으로) → 서쪽 통로 → 복도
+      const C = CSTAIR;
+      const za = (C.az1 + C.az2) / 2;
+      const zb = (C.bz1 + C.bz2) / 2;
+      const cp = [
+        { x: C.xa - 0.3, z: za, y: L },
+        { x: C.xb, z: za, y: L + 1.8 },
+        { x: C.xb + 0.5, z: za, y: L + 1.8 },
+        { x: C.xb + 0.5, z: zb, y: L + 1.8 },
+        { x: C.xb, z: zb, y: L + 1.8 },
+        { x: C.xa - 0.3, z: zb, y: L + 3.6 },
+      ].map((p) => ({ ...p, stair: true }));
+      const entry = up ? { x: st.xA, z: st.zEntry } : { x: st.xB, z: st.zEntry };
+      const exit = up ? { x: st.xB, z: st.zEntry } : { x: st.xA, z: st.zEntry };
+      return { entry, pts: up ? cp : cp.reverse(), exit };
+    }
     const pts = [
       { x: st.xA, z: st.zCorr, y: L },
       { x: st.xA, z: st.zFlightEnd, y: L + 1.8 },
@@ -213,6 +230,7 @@ export function createNavigator(blocksPerLevel) {
     if (la === lb) return planar(la, from, to);
     let best = null;
     for (const st of STAIRS) {
+      if (st.maxLevel != null && Math.max(la, lb) > st.maxLevel) continue; // 중앙 계단은 옥상까지 안 감
       const out = [];
       let cur = from;
       let ok = true;
