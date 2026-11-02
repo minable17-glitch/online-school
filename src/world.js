@@ -1049,8 +1049,29 @@ export function buildWorld(scene, { menu = [] } = {}) {
 
     if (t === 'class') {
       // 사물함 + 게시판 (뒤쪽 벽)
-      B.box('locker', 'deco', xe - 0.6, xe - 0.1, L, L + 1.2, -8.6, -0.7);
-      block(k, xe - 0.6, xe - 0.1, -8.6, -0.7);
+      B.box('locker', 'deco', xe - 0.6, xe - 0.1, L, L + 1.2, -6.6, -0.7);
+      block(k, xe - 0.6, xe - 0.1, -6.6, -0.7);
+      // 청소도구함 (뒤 왼쪽 구석, 하늘색 철제 2짝 문, 한쪽 문 열림 → 안에 빗자루·대걸레·쓰레받기)
+      B.box('cabinet', 'deco', xe - 0.75, xe - 0.1, L, L + 1.8, -8.7, -7.0);
+      B.box('partition', 'deco', xe - 0.76, xe - 0.75, L + 0.05, L + 1.75, -8.65, -7.9); // 닫힌 문짝
+      B.box('steel', 'deco', xe - 0.78, xe - 0.76, L + 0.85, L + 0.95, -7.98, -7.94);
+      {
+        const dg = new THREE.BoxGeometry(0.01, 1.7, 0.8);
+        dg.translate(0, 0, 0.4);
+        dg.rotateY(-1.1);
+        B.geo('partition', 'deco', dg, xe - 0.76, L + 0.9, -7.85); // 열린 문짝
+      }
+      B.box('tv', 'deco', xe - 0.72, xe - 0.13, L + 0.02, L + 1.78, -8.67, -7.03); // 안쪽 어두움
+      B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 1.3, 6), xe - 0.45, L + 0.75, -7.3); // 빗자루
+      B.box('yellow', 'deco', xe - 0.55, xe - 0.35, L + 0.05, L + 0.3, -7.4, -7.2);
+      B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 1.4, 6), xe - 0.3, L + 0.8, -7.6); // 대걸레
+      B.box('white', 'deco', xe - 0.4, xe - 0.2, L + 0.02, L + 0.12, -7.72, -7.5);
+      B.box('blue', 'deco', xe - 0.55, xe - 0.3, L + 0.02, L + 0.14, -7.95, -7.8); // 쓰레받기
+      const cabLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.14), new THREE.MeshBasicMaterial({ map: textTex(150, 42, '#ffffff', '#2b4a7a', ['청소 도구함'], 24, '#2b4a7a') }));
+      cabLabel.rotation.y = -Math.PI / 2;
+      cabLabel.position.set(xe - 0.765, L + 1.55, -8.3);
+      scene.add(cabLabel);
+      block(k, xe - 1.2, xe - 0.1, -8.75, -6.95);
       // 뒤 환경 게시판: 나무 테두리 + 초록 펠트판, 파스텔 스캘럽 띠, 제목, 알록달록 그림 작품, 종이꽃, 아래 울타리
       B.box('shelf', 'deco', xe - 0.14, xe - 0.1, L + 1.45, L + 2.65, -7.6, -1.4);
       const bbSeed = k * 7 + (room.id.codePointAt(2) || 0);
@@ -1163,12 +1184,8 @@ export function buildWorld(scene, { menu = [] } = {}) {
       B.box('leaf2', 'deco', xs + 0.15, xs + 0.75, L + 0.3, L + 0.6, -3.3, -2.9);
       for (let i = 0; i < 6; i++) B.box('white', 'deco', xs + 0.2 + (i % 3) * 0.18, xs + 0.34 + (i % 3) * 0.18, L + 0.6, L + 0.72, -3.25 + Math.floor(i / 3) * 0.18, -3.13 + Math.floor(i / 3) * 0.18);
       block(k, xs + 0.1, xs + 0.8, -3.35, -2.85);
-      B.geo('blue', 'deco', new THREE.CylinderGeometry(0.17, 0.14, 0.3, 10), xe - 1.0, L + 0.15, -8.45);
-      B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 1.4, 6).rotateX(0.12), xe - 0.85, L + 0.7, -8.3);
-      B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.012, 0.012, 1.2, 6).rotateX(-0.1), xe - 1.2, L + 0.6, -8.5);
-      B.box('yellow', 'deco', xe - 1.3, xe - 1.1, L, L + 0.2, -8.7, -8.45);
-      B.geo('metal', 'deco', new THREE.CylinderGeometry(0.15, 0.13, 0.4, 10), xe - 0.9, L + 0.2, -1.1);
-      block(k, xe - 1.4, xe - 0.65, -8.8, -8.1);
+      B.geo('metal', 'deco', new THREE.CylinderGeometry(0.15, 0.13, 0.4, 10), xe - 0.9, L + 0.2, -1.1); // 쓰레기통
+      block(k, xe - 1.1, xe - 0.7, -1.3, -0.9);
       // 1인용 책상 5줄 × 5열 (나무 상판 + 쇠 다리)
       for (let r = 0; r < 5; r++) {
         const dx = xs + 2.9 + r * 1.12;
@@ -2743,28 +2760,81 @@ export function buildWorld(scene, { menu = [] } = {}) {
     B.box('screen', 'deco', A.minX + 0.9, A.minX + 0.91, 2.67, 3.13, -28.4, -27.6);
     B.box('cork', 'deco', A.minX + T, A.minX + T + 0.03, 1.4, 2.4, -32.5, -30.5);
     for (let i = 0; i < 4; i++) B.box('white', 'deco', A.minX + T + 0.03, A.minX + T + 0.04, 1.55 + (i % 2) * 0.4, 1.85 + (i % 2) * 0.4, -32.3 + Math.floor(i / 2) * 0.9, -31.7 + Math.floor(i / 2) * 0.9);
-    // 둥근 식탁 + 철제 의자
-    for (const tz of [-30.4, -26.9, -23.4]) {
-      for (let tx = 9.5; tx <= 33; tx += 4.6) {
-        if (tz > -24 && tx > 17 && tx < 25) continue; // 출입구 앞은 비워 둠
-        B.geo('white', 'deco', new THREE.CylinderGeometry(0.62, 0.62, 0.04, 24), tx, 0.74, tz);
-        B.geo('metal', 'deco', new THREE.CylinderGeometry(0.05, 0.05, 0.72, 8), tx, 0.36, tz);
-        B.geo('metal', 'deco', new THREE.CylinderGeometry(0.3, 0.3, 0.03, 16), tx, 0.02, tz);
-        block(0, tx - 0.62, tx + 0.62, tz - 0.62, tz + 0.62);
-        for (let a = 0; a < 4; a++) {
-          const ang = (a / 4) * Math.PI * 2 + Math.PI / 4;
-          const cx = tx + Math.sin(ang) * 0.95;
-          const cz = tz + Math.cos(ang) * 0.95;
-          B.geo('chairDark', 'chair', new THREE.CylinderGeometry(0.19, 0.19, 0.04, 14), cx, 0.45, cz);
-          const back = new THREE.BoxGeometry(0.36, 0.38, 0.03);
-          back.translate(0, 0.66, 0.2);
-          back.rotateY(ang);
-          B.geo('metal', 'deco', back, cx, 0, cz);
-          for (const [lx, lz] of [[-0.13, -0.13], [0.13, -0.13], [-0.13, 0.13], [0.13, 0.13]]) B.box('metal', 'deco', cx + lx - 0.012, cx + lx + 0.012, 0, 0.44, cz + lz - 0.012, cz + lz + 0.012);
-          chairs.push({ x: cx, z: cz, seatY: 0.45, ry: ang + Math.PI, level: 0, room: 'cafe' });
-          if (a % 2 === 0) B.box('steel', 'deco', tx + Math.sin(ang) * 0.38 - 0.16, tx + Math.sin(ang) * 0.38 + 0.16, 0.76, 0.78, tz + Math.cos(ang) * 0.38 - 0.12, tz + Math.cos(ang) * 0.38 + 0.12);
+    // 90~2000년대 급식실: 긴 스테인리스 식탁 (6인) + 붙박이 둥근 의자, 줄줄이 배치
+    for (const tz of [-30.6, -28.2, -25.8, -23.4]) {
+      for (const tx0 of [8.5, 15.5, 25.5]) {
+        if (tz > -24.5 && tx0 > 14 && tx0 < 26) continue; // 출입구 앞은 비워 둠
+        const tx1 = tx0 + (tx0 === 15.5 ? 5.0 : 6.0);
+        B.box('steel', 'deco', tx0, tx1, 0.72, 0.76, tz - 0.4, tz + 0.4);
+        B.box('metal', 'deco', tx0 + 0.3, tx1 - 0.3, 0.68, 0.72, tz - 0.35, tz + 0.35);
+        for (const lx of [tx0 + 0.5, (tx0 + tx1) / 2, tx1 - 0.5]) {
+          B.geo('metal', 'deco', new THREE.CylinderGeometry(0.035, 0.035, 0.68, 8), lx, 0.34, tz);
+          const foot = new THREE.CylinderGeometry(0.03, 0.03, 1.9, 6).rotateX(Math.PI / 2);
+          B.geo('metal', 'deco', foot, lx, 0.06, tz);
+        }
+        block(0, tx0, tx1, tz - 1.05, tz + 1.05);
+        const n = Math.round((tx1 - tx0) / 1.0);
+        for (let q = 0; q < n; q++) {
+          const cx = tx0 + 0.5 + q * ((tx1 - tx0 - 1.0) / (n - 1));
+          for (const sgn of [-1, 1]) {
+            const cz = tz + sgn * 0.8;
+            B.geo('chairDark', 'chair', new THREE.CylinderGeometry(0.17, 0.17, 0.04, 14), cx, 0.45, cz);
+            B.geo('metal', 'deco', new THREE.CylinderGeometry(0.025, 0.025, 0.43, 6), cx, 0.22, cz);
+            const arm = new THREE.CylinderGeometry(0.02, 0.02, 0.8, 6).rotateX(Math.PI / 2);
+            B.geo('metal', 'deco', arm, cx, 0.1, tz + sgn * 0.4);
+            chairs.push({ x: cx, z: cz, seatY: 0.45, ry: sgn > 0 ? Math.PI : 0, level: 0, room: 'cafe' });
+          }
         }
       }
+    }
+    // 허리 높이 흰 타일 벽 + 초록 띠 (양 옆·앞 벽)
+    for (const [x1, x2, z1, z2] of [[A.minX + T, A.minX + T + 0.03, A.minZ + 1, A.maxZ - 1], [A.maxX - T - 0.03, A.maxX - T, A.minZ + 1, A.maxZ - 1], [A.minX + 1, CAFE_DOOR[0] - 0.3, A.maxZ - T - 0.03, A.maxZ - T], [CAFE_DOOR[1] + 0.3, A.maxX - 1, A.maxZ - T - 0.03, A.maxZ - T]]) {
+      B.box('tile', 'deco', x1, x2, 0.02, 1.2, z1, z2);
+      B.box('tileDark', 'deco', x1 - 0.002, x2 + 0.002, 1.2, 1.28, z1, z2);
+    }
+    // 식판 반납구 (스테인리스 선반 + 잔반통·국물통) — 동쪽 벽
+    B.box('steel', 'deco', A.maxX - 1.6, A.maxX - T, 0.8, 0.86, -31.2, -28.6);
+    B.box('steel', 'deco', A.maxX - 1.6, A.maxX - T, 0, 0.8, -31.2, -30.9);
+    B.box('steel', 'deco', A.maxX - 1.6, A.maxX - T, 0, 0.8, -28.9, -28.6);
+    for (let n = 0; n < 10; n++) B.box('steel', 'deco', A.maxX - 1.3, A.maxX - 0.6, 0.86 + n * 0.025, 0.875 + n * 0.025, -31.0, -30.4);
+    B.geo('leaf2', 'deco', new THREE.CylinderGeometry(0.3, 0.26, 0.6, 12), A.maxX - 0.9, 0.3, -29.9);
+    B.geo('leaf2', 'deco', new THREE.CylinderGeometry(0.3, 0.26, 0.6, 12), A.maxX - 0.9, 0.3, -29.1);
+    B.box('blue', 'deco', A.maxX - 1.5, A.maxX - 0.4, 0.86, 0.9, -29.4, -28.7); // 수저통 받침
+    const retSign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.3), new THREE.MeshBasicMaterial({ map: textTex(280, 60, '#2b4a7a', '#ffffff', ['식판 · 수저 반납 → 잔반은 통에'], 26) }));
+    retSign.rotation.y = -Math.PI / 2;
+    retSign.position.set(A.maxX - T - 0.04, 1.7, -29.9);
+    scene.add(retSign);
+    block(0, A.maxX - 1.8, A.maxX, -31.4, -28.4);
+    // 손 씻는 긴 세면대 (서쪽 벽) + 비누·수건, 정수기
+    B.box('white', 'deco', A.minX + T, A.minX + 0.75, 0.7, 0.85, -31.5, -29.0);
+    B.box('white', 'deco', A.minX + T, A.minX + 0.4, 0, 0.7, -31.5, -29.0);
+    for (let i = 0; i < 4; i++) {
+      const sz = -31.2 + i * 0.65;
+      B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.2, 6), A.minX + 0.4, 0.95, sz);
+      B.geo('yellow', 'deco', new THREE.SphereGeometry(0.035, 8, 6).scale(1, 0.6, 1.3), A.minX + 0.6, 0.87, sz + 0.3);
+    }
+    B.box('ginkgo', 'deco', A.minX + 0.75, A.minX + 0.79, 0.95, 1.3, -29.3, -29.0);
+    const mirror2 = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshStandardMaterial({ color: '#dfeaf0', metalness: 0.3, roughness: 0.15, emissive: '#8fa6b4', emissiveIntensity: 0.35 }));
+    mirror2.rotation.y = Math.PI / 2;
+    mirror2.position.set(A.minX + T + 0.04, 1.65, -30.25);
+    scene.add(mirror2);
+    block(0, A.minX, A.minX + 0.9, -31.7, -28.8);
+    B.box('white', 'deco', A.minX + T, A.minX + 0.75, 0, 1.2, -26.0, -25.4); // 정수기
+    B.box('blue', 'deco', A.minX + 0.3, A.minX + 0.7, 1.2, 1.6, -25.95, -25.45);
+    block(0, A.minX, A.minX + 0.9, -26.2, -25.2);
+    // 급식 표어 + 식사 예절 포스터 + 조리실 작은 창 (주방 벽)
+    const slogan2 = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 0.5), new THREE.MeshBasicMaterial({ map: textTex(800, 100, '#c8473d', '#ffffff', ['잔반 없는 날 · 골고루 먹고 튼튼하게'], 44) }));
+    slogan2.position.set(12, 3.0, kz + 0.05);
+    scene.add(slogan2);
+    const manners = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.5), new THREE.MeshBasicMaterial({ map: textTex(240, 300, '#fff8dc', '#2b2b2b', ['식사 예절', '', '1. 줄을 서서', '2. 손 씻고', '3. 조용히', '4. 남기지 않기', '5. 식판은 반납'], 24, '#2b4a7a') }));
+    manners.position.set(A.maxX - 4.5, 2.4, kz + 0.05);
+    scene.add(manners);
+    B.box('steel', 'deco', A.minX + 2.0, A.minX + 3.4, 1.3, 2.2, kz + 0.02, kz + 0.06);
+    B.box('glass', 'glass', A.minX + 2.1, A.minX + 3.3, 1.4, 2.1, kz + 0.03, kz + 0.05);
+    // 벽걸이 선풍기 2대 (그 시절 급식실 필수)
+    for (const fx of [A.minX + 6, A.maxX - 6]) {
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.22, 0.22, 0.1, 16).rotateX(Math.PI / 2), fx, 3.1, A.maxZ - T - 0.3);
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.03, 0.03, 0.25, 6).rotateX(Math.PI / 2), fx, 3.1, A.maxZ - T - 0.12);
     }
     for (let x = A.minX + 3; x < A.maxX - 2; x += 5) for (const z of [-31, -27, -23]) B.box('lamp', 'deco', x - 0.6, x + 0.6, L1 - 0.28, L1 - 0.22, z - 0.08, z + 0.08);
 
@@ -2830,6 +2900,39 @@ export function buildWorld(scene, { menu = [] } = {}) {
       scene.add(net);
     }
     for (let x = A.minX + 4; x < A.maxX - 2; x += 6.5) for (const z of [-32, -26.5, -22]) B.box('lamp', 'deco', x - 0.4, x + 0.4, TOP - 0.6, TOP - 0.5, z - 0.4, z + 0.4);
+    // 2000년대 강당 디테일: 무대 위 연단(교장 선생님 훈화) + 마이크, 무대 옆 피아노, 접이식 의자 몇 줄(앉기), 현수막, 벽 환풍기, 농구공 바구니, 체조 매트, 뜀틀
+    B.box('darkWood', 'deco', 23.5, 24.3, L1 + 1.0, L1 + 2.1, A.minZ + 1.0, A.minZ + 1.6);
+    B.box('darkWood', 'deco', 23.4, 24.4, L1 + 2.1, L1 + 2.16, A.minZ + 0.9, A.minZ + 1.7);
+    B.geo('tv', 'deco', new THREE.CylinderGeometry(0.012, 0.012, 0.45, 6), 23.9, L1 + 2.38, A.minZ + 1.3);
+    B.geo('tv', 'deco', new THREE.SphereGeometry(0.04, 8, 6), 23.9, L1 + 2.62, A.minZ + 1.3);
+    B.box('tv', 'deco', A.minX + 4.5, A.minX + 6.0, L1 + 1.0, L1 + 2.2, A.minZ + 0.6, A.minZ + 1.2); // 피아노
+    B.box('white', 'deco', A.minX + 4.6, A.minX + 5.9, L1 + 1.72, L1 + 1.76, A.minZ + 1.2, A.minZ + 1.4);
+    for (let i = 0; i < 9; i++) B.box('tv', 'deco', A.minX + 4.65 + i * 0.14, A.minX + 4.72 + i * 0.14, L1 + 1.76, L1 + 1.78, A.minZ + 1.22, A.minZ + 1.32);
+    const banner2 = new THREE.Mesh(new THREE.PlaneGeometry(7.0, 0.8), new THREE.MeshBasicMaterial({ map: textTex(700, 80, '#ffffff', '#c0392b', ['제 25회 학예발표회 · 꿈을 노래하자'], 42, '#2b4a7a') }));
+    banner2.position.set(21, L1 + 3.3, A.minZ + T + 0.12);
+    scene.add(banner2);
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 10; c++) {
+        const cx = 12 + c * 2.0;
+        const cz = A.minZ + 6.5 + r * 1.1;
+        B.box('metal', 'chair', cx - 0.22, cx + 0.22, L1 + 0.45, L1 + 0.48, cz - 0.22, cz + 0.22);
+        B.box('metal', 'chair', cx - 0.22, cx + 0.22, L1 + 0.48, L1 + 0.9, cz - 0.24, cz - 0.21);
+        for (const [lx, lz] of [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]]) B.box('metal', 'deco', cx + lx - 0.01, cx + lx + 0.01, L1, L1 + 0.45, cz + lz - 0.01, cz + lz + 0.01);
+        chairs.push({ x: cx, z: cz, seatY: L1 + 0.48, ry: Math.PI, level: 1, room: 'gym' });
+      }
+      block(1, 11.6, 30.4, A.minZ + 6.5 + r * 1.1 - 0.3, A.minZ + 6.5 + r * 1.1 + 0.3);
+    }
+    for (const fx of [A.minX + 5, A.maxX - 5]) {
+      B.geo('metal', 'deco', new THREE.CylinderGeometry(0.35, 0.35, 0.1, 16).rotateX(Math.PI / 2), fx, TOP - 1.2, A.maxZ - T - 0.08);
+      B.geo('tv', 'deco', new THREE.CylinderGeometry(0.06, 0.06, 0.14, 8).rotateX(Math.PI / 2), fx, TOP - 1.2, A.maxZ - T - 0.12);
+    }
+    B.box('metal', 'deco', A.maxX - 1.6, A.maxX - 0.6, L1, L1 + 0.7, -22.6, -21.6); // 농구공 바구니
+    for (let i = 0; i < 5; i++) B.geo('orangePaint', 'deco', new THREE.SphereGeometry(0.12, 10, 8), A.maxX - 1.35 + (i % 3) * 0.25, L1 + 0.75 + Math.floor(i / 3) * 0.2, -22.35 + (i % 2) * 0.3);
+    block(1, A.maxX - 1.8, A.maxX - 0.4, -22.8, -21.4);
+    B.box('blue', 'deco', A.minX + 0.6, A.minX + 2.6, L1, L1 + 0.5, -23.0, -21.2); // 매트 더미
+    B.box('lectern', 'deco', A.minX + 3.0, A.minX + 3.8, L1, L1 + 1.1, -22.4, -21.6); // 뜀틀
+    for (let i = 0; i < 4; i++) B.box('deskTop', 'deco', A.minX + 3.0 - i * 0.05, A.minX + 3.8 + i * 0.05, L1 + 0.25 * i, L1 + 0.25 * i + 0.03, -22.4 - i * 0.03, -21.6 + i * 0.03);
+    block(1, A.minX + 0.4, A.minX + 4.0, -23.2, -21.0);
     // 2층 강당은 구름다리 말고는 바깥과 이어지지 않음 (길찾기)
     block(1, -BX, BRIDGE.minX, A.maxZ, Z_BACK);
     block(1, BRIDGE.maxX, BX, A.maxZ, Z_BACK);
