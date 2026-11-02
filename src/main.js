@@ -14,7 +14,8 @@ import { Avatar, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } fro
 import { schoolNow, todayMenu, setTestTime } from './schedule.js';
 import { createNavigator } from './pathfind.js';
 import { connectRoom } from './net.js';
-import { playSchoolBell, playClap, playPop, unlockAudio } from './audio.js';
+import { playSchoolBell, playClap, playPop, unlockAudio, playPianoNote } from './audio.js';
+import { createActivities } from './activities.js';
 import { createAmbience } from './ambience.js';
 
 const params = new URLSearchParams(location.search);
@@ -133,6 +134,13 @@ function onBall(s) {
 const teachers = createTeachers({ scene, world });
 // ── 등교 시간 교문지도 · 방과 후 노점 ──
 const events = createEvents({ scene });
+// 특별실 놀이 (미술실 그림 · 음악실 피아노 · 컴퓨터실 블록 게임)
+const activities = createActivities({
+  me,
+  world,
+  onNote: (n) => net.send('act', { type: 'note', n }),
+  onAct: (kind, score) => net.send('act', { type: kind, score }),
+});
 
 // ── 매점 아주머니 ──
 const npc = new Avatar({ id: 'store-npc', name: '매점 아주머니', color: '#c0603f', occlude: true });
@@ -407,6 +415,15 @@ function onAction(a) {
       o.avatar.showEmoji(item[0], 15);
       o.avatar.say(`${item[1]} 냠냠!`);
     }
+  } else if (a.type === 'note') {
+    const n = a.n | 0;
+    if (n >= 36 && n <= 96) playPianoNote(n, distVolume(o.avatar) * 0.7);
+    o.avatar.showEmoji('🎵', 2);
+  } else if (a.type === 'art') {
+    o.avatar.showEmoji('🎨', 8);
+    o.avatar.say('그림 완성!');
+  } else if (a.type === 'game') {
+    o.avatar.say(`블록 쌓기 ${a.score | 0}점!`);
   } else if (['hand', 'bow', 'clap'].includes(a.type)) {
     o.avatar.play(a.type);
     if (a.type === 'clap') playClap(distVolume(o.avatar));
@@ -1169,6 +1186,7 @@ function frame() {
   updateShots(dt);
   stepSounds();
   events.update(dt, me, camera.position);
+  activities.update(dt);
   teachers.update(dt, me, roomAt(me.pos.x, me.pos.z, me.pos.y)?.id, camera.position);
   soccer.update(dt, me, !!me.target);
   world.update(clock.elapsedTime);
@@ -1188,6 +1206,7 @@ function frame() {
     teachers.sync(me);
     events.sync(schoolNow());
     updateVendorBtn();
+    activities.sync(roomAt(me.pos.x, me.pos.z, me.pos.y));
     scorePill.classList.toggle('hidden', lastWhere !== '운동장');
     ambience?.setMix(soundMix());
   }

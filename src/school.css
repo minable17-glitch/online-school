@@ -289,3 +289,84 @@ button { font: inherit; cursor: pointer; }
   font-weight: 600;
   padding: 12px 18px;
 }
+
+/* ── 특별실 놀이 ── */
+.act-btn { background: rgba(126, 72, 168, 0.88); }
+.act-sheet { background: rgba(0, 0, 0, 0.25); }
+.act-card { max-height: 92vh; overflow-y: auto; padding-top: 16px; }
+.act-card p { margin-bottom: 10px; }
+.act-body { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.draw-canvas {
+  width: min(100%, 300px);
+  aspect-ratio: 4 / 5;
+  border: 6px solid #b8895a;
+  border-radius: 6px;
+  background: #fffdf6;
+  touch-action: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.draw-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.sw-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  font-size: 14px;
+  padding: 0;
+}
+.sw-btn.on { outline: 3px solid #3f7e4e; outline-offset: 2px; }
+.piano {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 170px;
+  background: #2a1a12;
+  padding: 6px 6px 8px;
+  border-radius: 8px;
+  touch-action: none;
+}
+.key { border: 0; padding: 0; touch-action: none; }
+.key.white {
+  flex: 1;
+  background: linear-gradient(#fff, #f1ede4);
+  border: 1px solid #bbb;
+  border-radius: 0 0 5px 5px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 11px;
+  color: #888;
+  padding-bottom: 6px;
+}
+.key.black {
+  position: absolute;
+  top: 6px;
+  height: 58%;
+  background: linear-gradient(#333, #111);
+  border-radius: 0 0 4px 4px;
+  z-index: 1;
+}
+.key.white.down { background: #f7e3a8; }
+.key.black.down { background: #6b5a2c; }
+.song { font-size: 13px; color: #555; margin: 0; }
+.game-canvas {
+  width: min(70vw, 234px);
+  aspect-ratio: 9 / 15;
+  border: 8px solid #d9d2bf;
+  border-radius: 8px;
+  background: #10161f;
+  image-rendering: pixelated;
+}
+.game-info { font-size: 14px; color: #444; }
+.game-info b { color: #2f5aa8; }
+.game-pad { display: grid; grid-template-columns: repeat(4, 64px); gap: 8px; }
+.pad-btn {
+  height: 52px;
+  border: 0;
+  border-radius: 14px;
+  background: #3b4652;
+  color: #fff;
+  font-size: 22px;
+  touch-action: none;
+}
+.pad-btn:active { background: #56677a; }

@@ -283,6 +283,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
   const chairs = [];
   const boards = new Map(); // 반 id → { canvas, texture }
   const animated = [];
+  const artEasels = []; // 미술실 이젤 캔버스 (내가 그린 그림을 걸 수 있음)
 
   // 재질
   const std = (color, extra = {}, uvScale = 1) => {
@@ -1039,6 +1040,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
           cv.rotation.y = Math.PI;
           cv.position.set(ex, L + 1.2, -0.9);
           scene.add(cv);
+          artEasels.push(cv);
           block(k, ex - 0.35, ex + 0.35, -1.05, -0.55);
         }
         B.box('white', 'deco', xs + 2.0, xs + 2.5, L, L + 1.0, -8.4, -7.9);
@@ -2756,6 +2758,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
     walkables,
     occluders: [...built.wall, ...built.floor, ...built.glass],
     tapBlockers: built.wall,
+    artEasels,
     chairMeshes: built.chair,
     stairMeshes: built.stair,
     staffSeats,

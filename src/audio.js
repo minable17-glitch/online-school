@@ -131,3 +131,43 @@ export function playPop(volume = 0.5) {
   o.start();
   o.stop(c.currentTime + 0.3);
 }
+
+// 피아노 한 음 (midi 번호). 배음 몇 개 + 망치 치는 소리 + 천천히 사라짐
+export function playPianoNote(midi, volume = 0.6) {
+  const c = ac();
+  if (!c || volume <= 0.01) return;
+  const t = c.currentTime;
+  const f = 440 * 2 ** ((midi - 69) / 12);
+  const out = c.createGain();
+  out.gain.value = volume * 0.5;
+  const lp = c.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(Math.min(9000, f * 9), t);
+  lp.frequency.exponentialRampToValueAtTime(Math.max(400, f * 2), t + 1.2);
+  lp.connect(out).connect(c.destination);
+  const len = 2.2 - Math.min(1.2, (midi - 48) / 30);
+  [[1, 1], [2, 0.45], [3, 0.2], [4, 0.1], [5.02, 0.05]].forEach(([mul, amp]) => {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = mul === 1 ? 'triangle' : 'sine';
+    o.frequency.value = f * mul;
+    o.detune.value = (Math.random() - 0.5) * 4;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(amp, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(amp * 0.35, t + 0.25);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len / Math.sqrt(mul));
+    o.connect(g).connect(lp);
+    o.start(t);
+    o.stop(t + len + 0.1);
+  });
+  // 망치 소리 (아주 짧은 잡음)
+  const n = c.createBuffer(1, Math.floor(c.sampleRate * 0.03), c.sampleRate);
+  const d = n.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  const ns = c.createBufferSource();
+  ns.buffer = n;
+  const ng = c.createGain();
+  ng.gain.value = 0.08;
+  ns.connect(ng).connect(lp);
+  ns.start(t);
+}
