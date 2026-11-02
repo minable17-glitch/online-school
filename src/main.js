@@ -935,6 +935,7 @@ function updateAnnex() {
   shootBtn.classList.toggle('hidden', !nearHoop);
   // 점심시간엔 복도 급식차 옆에서도 급식 받기 (교실 배식)
   const lv = levelOfY(me.pos.y);
+  world.setCartsVisible(schoolNow().kind === 'lunch');
   const nearCart = schoolNow().kind === 'lunch' && world.carts.some((ct) => ct.level === lv && Math.hypot(ct.x - x, ct.z - z) < 2.2);
   mealBtn.classList.toggle('hidden', !(c || nearCart));
   if (c && !inCafeNow) cook.say(`오늘은 ${todayMenu()[2]}다~ 줄 서라~`);

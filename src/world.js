@@ -849,6 +849,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
   );
   const wallClockMat = new THREE.MeshBasicMaterial({ map: wallClockTex, transparent: true });
   const wallClockGeo = new THREE.CircleGeometry(0.22, 24);
+  const cartSpots = []; // 급식차 자리 { x, y, z, level }
   const carts = []; // 급식차 위치 { x, z, level } (점심시간에 가까이 가면 급식 받기)
   const staffSeats = []; // NPC 직원이 앉는 자리 { room, x, z, seatY, ry, role }
 
@@ -1037,15 +1038,92 @@ export function buildWorld(scene, { menu = [] } = {}) {
       // 사물함 + 게시판 (뒤쪽 벽)
       B.box('locker', 'deco', xe - 0.6, xe - 0.1, L, L + 1.2, -8.6, -0.7);
       block(k, xe - 0.6, xe - 0.1, -8.6, -0.7);
-      B.box('cork', 'deco', xe - 0.13, xe - 0.1, L + 1.5, L + 2.6, -7.5, -1.5);
-      // 뒤 게시판 위 환경미화 종이들 (그림·글짓기)
-      for (let i = 0; i < 6; i++) {
-        const pz = -7.2 + i * 1.0;
-        const pm = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.8), new THREE.MeshBasicMaterial({ map: textTex(90, 120, ['#fff8e1', '#e8f4ff', '#fdebe8', '#eefbe6'][i % 4], '#555555', [['시화', '봄'], ['독후감'], ['우리 반', '약속'], ['그림', '일기'], ['환경', '포스터'], ['자유', '주제']][i], 20) }));
-        pm.rotation.y = -Math.PI / 2;
-        pm.position.set(xe - 0.135, L + 2.05, pz);
-        scene.add(pm);
-      }
+      // 뒤 환경 게시판: 나무 테두리 + 초록 펠트판, 파스텔 스캘럽 띠, 제목, 알록달록 그림 작품, 종이꽃, 아래 울타리
+      B.box('shelf', 'deco', xe - 0.14, xe - 0.1, L + 1.45, L + 2.65, -7.6, -1.4);
+      const bbSeed = k * 7 + (room.id.codePointAt(2) || 0);
+      const bbTex = canvasTex(1200, 240, (g, w, h) => {
+        g.fillStyle = '#2f6b45';
+        g.fillRect(0, 0, w, h);
+        const pastel = ['#f9c6d0', '#bfe3f3', '#d9c7ef', '#fde9b5', '#c9ecc4'];
+        for (let i = 0; i < 30; i++) {
+          g.fillStyle = pastel[i % 5];
+          g.beginPath();
+          g.arc(20 + i * 40, 8, 20, 0, Math.PI * 2);
+          g.fill();
+        }
+        g.fillStyle = '#fff8dc';
+        g.fillRect(430, 26, 340, 44);
+        g.strokeStyle = '#2b4a7a';
+        g.lineWidth = 3;
+        g.strokeRect(430, 26, 340, 44);
+        g.fillStyle = ['#c0392b', '#2b4a7a', '#7b4fc9', '#1f7a3f'][bbSeed % 4];
+        g.font = 'bold 30px sans-serif';
+        g.textAlign = 'center';
+        g.fillText(['꽃을 닮은 우리', '우리들의 솜씨', '꿈이 자라는 교실', '우리 반 바라기'][bbSeed % 4], 600, 58);
+        const cols = ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#e67e22', '#1abc9c', '#ff7eb6', '#74b9ff'];
+        for (let i = 0; i < 9; i++) {
+          const x = 150 + i * 100;
+          const y = 88;
+          g.fillStyle = '#ffffff';
+          g.fillRect(x, y, 88, 118);
+          for (let j = 0; j < 7; j++) {
+            g.fillStyle = cols[(i * 3 + j * 5 + bbSeed) % cols.length];
+            const sx = ((i * 13 + j * 29 + bbSeed * 7) % 60) + 8;
+            const sy = ((i * 31 + j * 17 + bbSeed * 3) % 80) + 8;
+            if ((i + j) % 3 === 0) {
+              g.beginPath();
+              g.arc(x + sx + 10, y + sy + 10, 12 + (j % 3) * 4, 0, Math.PI * 2);
+              g.fill();
+            } else g.fillRect(x + sx, y + sy, 18 + (j % 4) * 6, 14 + (j % 3) * 8);
+          }
+          g.strokeStyle = '#d0d0d0';
+          g.lineWidth = 2;
+          g.strokeRect(x, y, 88, 118);
+        }
+        // 양 끝 종이꽃 + 가지
+        for (const bx of [60, 1140]) {
+          g.strokeStyle = '#6b4a32';
+          g.lineWidth = 6;
+          g.beginPath();
+          g.moveTo(bx, 230);
+          g.lineTo(bx + (bx < 600 ? 20 : -20), 60);
+          g.stroke();
+          for (let i = 0; i < 9; i++) {
+            g.fillStyle = ['#ff6b81', '#ffd166', '#a29bfe', '#ff9f43', '#fd79a8', '#55efc4'][i % 6];
+            g.beginPath();
+            g.arc(bx + ((i * 37) % 70) - 35, 60 + i * 18, 11, 0, Math.PI * 2);
+            g.fill();
+            g.fillStyle = '#2ecc71';
+            g.fillRect(bx + ((i * 37) % 70) - 20, 70 + i * 18, 10, 5);
+          }
+        }
+        // 아래 나무 울타리 + 작은 꽃
+        g.fillStyle = '#8d5a3c';
+        for (let x = 130; x < 1070; x += 24) {
+          g.fillRect(x, 212, 10, 24);
+          g.beginPath();
+          g.moveTo(x, 212);
+          g.lineTo(x + 5, 204);
+          g.lineTo(x + 10, 212);
+          g.fill();
+        }
+        g.fillRect(130, 220, 940, 4);
+        for (let x = 150; x < 1070; x += 70) {
+          g.fillStyle = ['#ff7eb6', '#ffd166', '#74b9ff'][(x / 70) % 3 | 0];
+          g.beginPath();
+          g.arc(x, 232, 5, 0, Math.PI * 2);
+          g.fill();
+        }
+      }, { repeat: false });
+      const bb = new THREE.Mesh(new THREE.PlaneGeometry(6.0, 1.2), new THREE.MeshBasicMaterial({ map: bbTex }));
+      bb.rotation.y = -Math.PI / 2;
+      bb.position.set(xe - 0.145, L + 2.05, -4.5);
+      scene.add(bb);
+      // 게시판 옆 작은 시간표·안내문 (오른쪽 끝)
+      const notice = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7), new THREE.MeshBasicMaterial({ map: textTex(100, 140, '#ffffff', '#333333', ['우리 반', '알림', '', '천천히', '조용히', '다정히'], 14, '#c0392b') }));
+      notice.rotation.y = -Math.PI / 2;
+      notice.position.set(xe - 0.135, L + 2.05, -1.0);
+      scene.add(notice);
       // 칠판 위 급훈 액자 + 오른쪽 시간표 · 왼쪽 청소 당번표
       const motto = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.32), new THREE.MeshBasicMaterial({ map: textTex(330, 96, '#f7f2e2', '#2b2b2b', [['성실 · 근면 · 협동', '바른 생활 바른 마음', '최선을 다하자', '꿈을 향하여'][(room.level * 4 + (room.id.codePointAt(2) || 0)) % 4]], 40, '#5a4030') }));
       motto.rotation.y = Math.PI / 2;
@@ -1067,9 +1145,11 @@ export function buildWorld(scene, { menu = [] } = {}) {
       B.geo('tv', 'deco', new THREE.CylinderGeometry(0.03, 0.03, 0.08, 6).rotateZ(Math.PI / 2), xs + 0.54, L + 1.02, -6.75);
       B.box('white', 'deco', xs + 0.2, xs + 0.4, L + 1.0, L + 1.06, -6.85, -6.65);
       // 앞문 옆 초록 우유 상자 + 우유 팩, 뒤 구석 파란 양동이·대걸레·빗자루·쓰레기통
-      B.box('leaf2', 'deco', xs + 0.9, xs + 1.5, L, L + 0.3, -8.75, -8.35);
-      for (let i = 0; i < 6; i++) B.box('white', 'deco', xs + 0.95 + (i % 3) * 0.18, xs + 1.09 + (i % 3) * 0.18, L + 0.3, L + 0.42, -8.7 + Math.floor(i / 3) * 0.18, -8.58 + Math.floor(i / 3) * 0.18);
-      block(k, xs + 0.85, xs + 1.55, -8.8, -8.3);
+      // 우유 급식 상자 (초록 플라스틱, 앞쪽 칠판 벽 아래) + 우유팩
+      B.box('leaf2', 'deco', xs + 0.15, xs + 0.75, L, L + 0.3, -3.3, -2.9);
+      B.box('leaf2', 'deco', xs + 0.15, xs + 0.75, L + 0.3, L + 0.6, -3.3, -2.9);
+      for (let i = 0; i < 6; i++) B.box('white', 'deco', xs + 0.2 + (i % 3) * 0.18, xs + 0.34 + (i % 3) * 0.18, L + 0.6, L + 0.72, -3.25 + Math.floor(i / 3) * 0.18, -3.13 + Math.floor(i / 3) * 0.18);
+      block(k, xs + 0.1, xs + 0.8, -3.35, -2.85);
       B.geo('blue', 'deco', new THREE.CylinderGeometry(0.17, 0.14, 0.3, 10), xe - 1.0, L + 0.15, -8.45);
       B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 1.4, 6).rotateX(0.12), xe - 0.85, L + 0.7, -8.3);
       B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.012, 0.012, 1.2, 6).rotateX(-0.1), xe - 1.2, L + 0.6, -8.5);
@@ -1094,24 +1174,8 @@ export function buildWorld(scene, { menu = [] } = {}) {
           } else if (hsh === 2) B.box('ginkgo', 'deco', dx - 0.1, dx + 0.1, L + 0.76, L + 0.775, cz - 0.15, cz + 0.1);
         }
       }
-      // 급식차 (복도, 앞문 옆): 스테인리스 2단 카트 + 밥통·국통·반찬통 + 식판 더미 — 2000년대 교실 배식
-      {
-        const cx = xs + 3.4;
-        const cz2 = Z_CORR - 0.6;
-        B.box('steel', 'deco', cx - 0.45, cx + 0.45, L + 0.1, L + 0.14, cz2 - 0.3, cz2 + 0.3);
-        B.box('steel', 'deco', cx - 0.45, cx + 0.45, L + 0.82, L + 0.86, cz2 - 0.3, cz2 + 0.3);
-        for (const [px, pz] of [[-0.42, -0.27], [0.42, -0.27], [-0.42, 0.27], [0.42, 0.27]]) {
-          B.geo('steel', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 0.76, 6), cx + px, L + 0.48, cz2 + pz);
-          B.geo('tv', 'deco', new THREE.CylinderGeometry(0.05, 0.05, 0.03, 8).rotateZ(Math.PI / 2), cx + px, L + 0.05, cz2 + pz);
-        }
-        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.17, 0.17, 0.3, 14), cx - 0.25, L + 1.01, cz2); // 밥통
-        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.15, 0.15, 0.3, 14), cx + 0.12, L + 1.01, cz2); // 국통
-        B.box('steel', 'deco', cx + 0.3, cx + 0.45, L + 0.86, L + 1.0, cz2 - 0.25, cz2 + 0.25); // 반찬통
-        for (let i = 0; i < 8; i++) B.box('steel', 'deco', cx - 0.2, cx + 0.2, L + 0.14 + i * 0.02, L + 0.155 + i * 0.02, cz2 - 0.15, cz2 + 0.15); // 식판
-        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.012, 0.012, 0.5, 6).rotateX(Math.PI / 2), cx - 0.3, L + 0.62, cz2 - 0.18); // 국자
-        block(k, cx - 0.55, cx + 0.55, cz2 - 0.4, cz2 + 0.35);
-        carts.push({ x: cx, z: cz2, level: k });
-      }
+      // 급식차 (복도, 앞문 옆) — 점심시간에만 나타남
+      cartSpots.push({ x: xs + 3.4, z: Z_CORR - 0.6, y: L, level: k });
     } else if (t === 'science') {
       // 과학실: 검은 상판 실험대 + 개수대·수도꼭지, 나무 의자, 지구본·비커 장
       for (const tx of [xs + 3.3, xs + 6.4]) {
@@ -2013,10 +2077,15 @@ export function buildWorld(scene, { menu = [] } = {}) {
     }
     for (let i = 0; i < 3; i++) {
       const bx = x1 + 2 + i * 4;
-      B.box('chair', 'deco', bx - 1.1, bx + 1.1, 0.45, 0.5, 1.9, 2.4);
-      B.box('chair', 'deco', bx - 1.1, bx + 1.1, 0.5, 0.95, 1.85, 1.9);
-      for (const lx of [bx - 1, bx + 1]) B.box('metal', 'deco', lx - 0.04, lx + 0.04, 0, 0.5, 1.95, 2.35);
-      block(0, bx - 1.2, bx + 1.2, 1.8, 2.5);
+      // 나무 벤치 (앉을 수 있음, 운동장 쪽을 봄): 널판 좌석 + 등받이 + 쇠 다리
+      for (const sz of [1.95, 2.17, 2.39]) B.box('chair', 'chair', bx - 1.1, bx + 1.1, 0.45, 0.5, sz - 0.1, sz + 0.1);
+      for (const sy of [0.65, 0.85]) B.box('chair', 'chair', bx - 1.1, bx + 1.1, sy - 0.08, sy + 0.08, 1.84, 1.9);
+      for (const lx of [bx - 1, bx + 1]) {
+        B.box('metal', 'deco', lx - 0.03, lx + 0.03, 0, 0.5, 1.95, 2.4);
+        B.box('metal', 'deco', lx - 0.03, lx + 0.03, 0.5, 1.0, 1.82, 1.88);
+      }
+      block(0, bx - 1.2, bx + 1.2, 1.75, 2.5);
+      for (const cx of [bx - 0.55, bx + 0.55]) chairs.push({ x: cx, z: 2.15, seatY: 0.5, ry: 0, level: 0, room: null });
     }
     B.box('tv', 'deco', (x1 + x2) / 2 - 0.3, (x1 + x2) / 2 + 0.3, 0, 0.7, 0.4, 1.0); // 쓰레기통
     block(0, (x1 + x2) / 2 - 0.4, (x1 + x2) / 2 + 0.4, 0.3, 1.1);
@@ -2042,8 +2111,14 @@ export function buildWorld(scene, { menu = [] } = {}) {
     for (const sx of [-1, 1]) {
       // 양옆 경사로 (비스듬한 콘크리트)
       const g = new THREE.BoxGeometry(69.5 - 47.3, 0.12, Math.hypot(3, 1.2));
-      g.rotateX(-Math.atan2(1.2, 3));
+      g.rotateX(Math.atan2(1.2, 3)); // 운동장 쪽(+z)으로 내려감
       B.geo('concrete', 'floor', g, sx * (47.3 + 69.5) / 2, FIELD_Y / 2 - 0.06, FIELD_Z + 1.5);
+      // 경사로 속 (흙) 채우기: 아래가 비어 보이지 않게
+      for (let i = 0; i < 6; i++) {
+        const za = FIELD_Z + i * 0.5;
+        const top = (FIELD_Y * (za + 0.5 - FIELD_Z)) / 3 - 0.06;
+        B.box('concrete', 'wall', Math.min(sx * 47.3, sx * 69.5), Math.max(sx * 47.3, sx * 69.5), FIELD_Y - 0.3, top, za, za + 0.5);
+      }
     }
     // 차양: 8m 짜리 비스듬한 판 + 앞뒤 쇠기둥 (구령대 자리는 비움)
     for (let x0 = -46; x0 < 46; x0 += 9) {
@@ -2199,15 +2274,6 @@ export function buildWorld(scene, { menu = [] } = {}) {
   // 스탠드 (서쪽 계단식 관람석) — 운동장 땅 기준
   for (let i = 0; i < 4; i++) B.box('concrete', 'wall', -50 - 2 * (i + 1), -50 - 2 * i, FIELD_Y - 0.1, FIELD_Y + 0.45 * (i + 1), 18, 64);
   block(0, -60, -50, 18, 64);
-  // 철봉 (동쪽)
-  [1.2, 1.5, 1.8].forEach((h, i) => {
-    const z = 21 + i * 2.2;
-    for (const pz of [z - 0.9, z + 0.9]) B.geo('metal', 'deco', new THREE.CylinderGeometry(0.05, 0.05, h, 8), 53, h / 2, pz);
-    const bar = new THREE.CylinderGeometry(0.025, 0.025, 1.8, 8);
-    bar.rotateX(Math.PI / 2);
-    B.geo('pole', 'deco', bar, 53, h, z);
-    block(0, 52.8, 53.2, z - 1, z + 1);
-  });
   // 정글짐
   {
     const gx = 54;
@@ -3390,7 +3456,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
     B.box('concrete', 'deco', 57.95, 58.1, 0, 0.12, 19, 23);
     pave(58, 66, 20.2, 21.8, tex.concrete, FIELD_Y + 0.025, 3); // 도움닫기 길
     B.box('white', 'deco', 58.2, 58.4, 0.026, 0.03, 20.2, 21.8); // 발 구름판
-    signPlane(['멀리뛰기'], 1.0, 0.3, 54, 0.6, 18.85, 0, '#ffffff', '#2b4a7a', 44, '#2b4a7a');
+    signPlane(['멀리뛰기'], 1.0, 0.3, 54, FIELD_Y + 0.6, 18.85, 0, '#ffffff', '#2b4a7a', 44, '#2b4a7a');
     // 야외 농구장 (반 코트): 콘크리트 + 흰 선 + 철제 골대
     const bx1 = 52;
     const bx2 = 66;
@@ -3788,6 +3854,29 @@ export function buildWorld(scene, { menu = [] } = {}) {
   }
 
 
+  // 급식차 그룹 (점심시간에만 보임): 스테인리스 2단 카트 + 밥통·국통·반찬통 + 식판 더미 + 국자
+  const cartGroup = new THREE.Group();
+  cartGroup.visible = false;
+  scene.add(cartGroup);
+  {
+    const CB = createBatcher();
+    for (const c of cartSpots) {
+      const { x: cx, z: cz2, y: L } = c;
+      CB.box('steel', 'deco', cx - 0.45, cx + 0.45, L + 0.1, L + 0.14, cz2 - 0.3, cz2 + 0.3);
+      CB.box('steel', 'deco', cx - 0.45, cx + 0.45, L + 0.82, L + 0.86, cz2 - 0.3, cz2 + 0.3);
+      for (const [px, pz] of [[-0.42, -0.27], [0.42, -0.27], [-0.42, 0.27], [0.42, 0.27]]) {
+        CB.geo('steel', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 0.76, 6), cx + px, L + 0.48, cz2 + pz);
+        CB.geo('tv', 'deco', new THREE.CylinderGeometry(0.05, 0.05, 0.03, 8).rotateZ(Math.PI / 2), cx + px, L + 0.05, cz2 + pz);
+      }
+      CB.geo('steel', 'deco', new THREE.CylinderGeometry(0.17, 0.17, 0.3, 14), cx - 0.25, L + 1.01, cz2);
+      CB.geo('steel', 'deco', new THREE.CylinderGeometry(0.15, 0.15, 0.3, 14), cx + 0.12, L + 1.01, cz2);
+      CB.box('steel', 'deco', cx + 0.3, cx + 0.45, L + 0.86, L + 1.0, cz2 - 0.25, cz2 + 0.25);
+      for (let i = 0; i < 8; i++) CB.box('steel', 'deco', cx - 0.2, cx + 0.2, L + 0.14 + i * 0.02, L + 0.155 + i * 0.02, cz2 - 0.15, cz2 + 0.15);
+      CB.geo('steel', 'deco', new THREE.CylinderGeometry(0.012, 0.012, 0.5, 6).rotateX(Math.PI / 2), cx - 0.3, L + 0.62, cz2 - 0.18);
+      carts.push({ x: cx, z: cz2, level: c.level });
+    }
+    CB.build(cartGroup, mats);
+  }
   const built = B.build(scene, mats);
   walkables.push(...built.floor);
 
@@ -3891,6 +3980,9 @@ export function buildWorld(scene, { menu = [] } = {}) {
     stairMeshes: built.stair,
     staffSeats,
     carts,
+    setCartsVisible: (v) => {
+      cartGroup.visible = v;
+    },
     cookSpots,
     chairs,
     blocks,
