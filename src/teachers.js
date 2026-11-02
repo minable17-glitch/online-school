@@ -245,7 +245,7 @@ export function createTeachers({ scene, world }) {
             t.writing = 3;
             a.play('hand');
           } else {
-            a.target = { x: xs + 0.85, z: R(-6.6, -2.4) };
+            a.target = { x: xs + 0.85, z: R(-6.6, -2.9) };
             a.path = [];
           }
           t.nextMove = R(3, 8);

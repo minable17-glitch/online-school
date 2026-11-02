@@ -136,11 +136,15 @@ npc.pos.set((STORE.minX + STORE.maxX) / 2, 0, 5.0);
 npc.root.rotation.y = 0;
 scene.add(npc.root);
 
-// ── 급식실 조리사님 ──
-const cook = new Avatar({ id: 'cafe-cook', name: '조리사님', color: '#f2f2ee', occlude: true, look: { outfit: 'navy', hair: 'bun', hairColor: 'dark', acc: 'none' } });
-cook.pos.set(25, 0, -41.2);
-cook.root.rotation.y = 0;
-scene.add(cook.root);
+// ── 급식실 조리사님 (위생모 + 앞치마) ──
+const cooks = [19.5, 25, 30.5].map((x, i) => {
+  const c = new Avatar({ id: `cafe-cook-${i}`, name: '조리사님', color: '#f2f2ee', occlude: true, look: { outfit: 'navy', hair: 'bun', hairColor: 'dark', acc: 'hairnet' } });
+  c.pos.set(x, 0, -40.9);
+  c.root.rotation.y = 0;
+  scene.add(c.root);
+  return c;
+});
+const cook = cooks[1];
 
 // ── 농구 슛 (체육관) ──
 const shots = []; // 날아가는 공들
@@ -1036,7 +1040,7 @@ function frame() {
   me.update(dt, world.heightAt);
   for (const { avatar } of others.values()) avatar.update(dt, world.heightAt);
   npc.update(dt, () => 0);
-  cook.update(dt, () => 0);
+  for (const c of cooks) c.update(dt, () => 0);
   updateShots(dt);
   teachers.update(dt, me, roomAt(me.pos.x, me.pos.z, me.pos.y)?.id, camera.position);
   soccer.update(dt, me, !!me.target);

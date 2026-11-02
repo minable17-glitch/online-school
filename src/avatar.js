@@ -30,6 +30,7 @@ export const ACCS = [
   { id: 'glasses', name: '안경' },
   { id: 'cap', name: '야구모자' },
   { id: 'ribbon', name: '리본' },
+  { id: 'hairnet', name: '위생모' },
 ];
 
 export function defaultLook(id, isTeacher) {
@@ -343,6 +344,11 @@ export class Avatar {
       const red = accMat('#c8473d');
       add(this.accGroup, new THREE.SphereGeometry(0.435, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.36), red, 0, 0.04, -0.02, 1, 1, 1, -0.2);
       add(this.accGroup, new THREE.CylinderGeometry(0.26, 0.26, 0.025, 20, 1, false, -Math.PI / 2, Math.PI), red, 0, 0.17, 0.3, 1, 1, 1.1, 0.12);
+    } else if (l.acc === 'hairnet') {
+      const net = accMat('#f7f7f4');
+      const cap = add(this.accGroup, new THREE.SphereGeometry(0.47, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), net, 0, 0.05, -0.03, 1.02, 0.9, 1.02, -0.25);
+      cap.castShadow = true;
+      add(this.accGroup, new THREE.TorusGeometry(0.43, 0.035, 6, 24), net, 0, 0.06, -0.06, 1, 1, 1, Math.PI / 2 - 0.25);
     } else if (l.acc === 'ribbon') {
       const pink = accMat('#ee7fa6');
       for (const sx of [-1, 1]) {
