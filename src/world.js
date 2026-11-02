@@ -1109,6 +1109,15 @@ export function buildWorld(scene, { menu = [] } = {}) {
       block(k, xs + 0.15, xs + 0.55, -2.6, -0.8);
       plant(xe - 0.6, -1.0, L);
       block(k, xe - 0.85, xe - 0.35, -1.25, -0.75);
+      // 역대 교장 사진 액자 줄 + 트로피 장
+      for (let i = 0; i < 6; i++) {
+        B.box('darkWood', 'deco', xs + 1.0 + i * 1.1, xs + 1.75 + i * 1.1, L + 2.15, L + 2.75, Z_CORR + 0.1, Z_CORR + 0.13);
+        B.box(i % 2 ? 'beige' : 'white', 'deco', xs + 1.07 + i * 1.1, xs + 1.68 + i * 1.1, L + 2.22, L + 2.68, Z_CORR + 0.13, Z_CORR + 0.14);
+      }
+      B.box('shelf', 'deco', xe - 0.55, xe - 0.12, L, L + 1.8, -8.4, -6.4);
+      B.box('glass', 'glass', xe - 0.57, xe - 0.55, L + 0.2, L + 1.75, -8.35, -6.45);
+      for (let i = 0; i < 6; i++) B.geo('yellow', 'deco', new THREE.CylinderGeometry(0.05, 0.08, 0.25 + (i % 3) * 0.08, 10), xe - 0.33, L + 0.55 + Math.floor(i / 3) * 0.6, -8.1 + (i % 3) * 0.6);
+      block(k, xe - 0.57, xe - 0.12, -8.4, -6.4);
     } else if (t === 'admin') {
       // 행정실: 민원 창구 카운터, 사무 책상 + 모니터, 서류 캐비닛, 금고
       B.box('lectern', 'deco', xs + 2.6, xs + 6.4, L, L + 1.05, -7.6, -7.2);
@@ -1313,16 +1322,86 @@ export function buildWorld(scene, { menu = [] } = {}) {
       B.box('shelf', 'deco', hall.xs + 0.1, hall.xs + 0.5, L, L + 2.0, -8.4, -6.0);
       block(k, hall.xs + 0.1, hall.xs + 0.5, -8.4, -6.0);
     } else {
+      // 도서실: 알록달록한 책이 꽂힌 벽 책장·가운데 양면 책장, 대출 데스크와 사서 선생님, 열람 탁자, 잡지꽂이, 반납함
+      const bookCols = ['red', 'yellow', 'blue', 'leaf2', 'books', 'ginkgo', 'white', 'cork', 'tv'];
+      let bi = 0;
+      const bookRow = (alongX, a1, a2, y, c1, c2) => {
+        let a = a1;
+        while (a < a2 - 0.05) {
+          const w = 0.05 + ((bi * 7) % 5) * 0.012;
+          const h = 0.22 + ((bi * 11) % 4) * 0.03;
+          const e = Math.min(a2, a + w);
+          if (alongX) B.box(bookCols[bi % bookCols.length], 'deco', a, e - 0.005, y, y + h, c1, c2);
+          else B.box(bookCols[bi % bookCols.length], 'deco', c1, c2, y, y + h, a, e - 0.005);
+          a = e;
+          bi++;
+        }
+      };
       for (const x1 of [hall.xs + 0.1, hall.xe - 0.5]) {
         B.box('shelf', 'deco', x1, x1 + 0.4, L, L + 2.2, -8.6, -0.6);
-        for (let i = 0; i < 4; i++) B.box('books', 'deco', x1 + 0.02, x1 + 0.38, L + 0.2 + i * 0.52, L + 0.5 + i * 0.52, -8.5, -0.7);
+        for (let i = 0; i < 5; i++) {
+          B.box('shelf', 'deco', x1, x1 + 0.4, L + 0.05 + i * 0.43, L + 0.08 + i * 0.43, -8.6, -0.6);
+          bookRow(false, -8.5, -0.7, L + 0.08 + i * 0.43, x1 + 0.05, x1 + 0.35);
+        }
         block(k, x1, x1 + 0.4, -8.6, -0.6);
       }
-      for (const z of [-6.5, -2.5]) {
-        B.box('deskTop', 'deco', -1.8, 1.8, L + 0.72, L + 0.76, z - 0.8, z + 0.8);
-        B.box('metal', 'deco', -1.7, 1.7, L, L + 0.72, z - 0.05, z + 0.05);
-        block(k, -1.8, 1.8, z - 0.8, z + 0.8);
+      // 가운데 양면 책장 2개
+      for (const [x1, x2] of [[-3.8, -0.9], [0.9, 3.8]]) {
+        B.box('shelf', 'deco', x1, x2, L, L + 1.6, -6.15, -5.65);
+        for (let i = 0; i < 3; i++) {
+          B.box('shelf', 'deco', x1, x2, L + 0.05 + i * 0.5, L + 0.08 + i * 0.5, -6.17, -5.63);
+          bookRow(true, x1 + 0.05, x2 - 0.05, L + 0.08 + i * 0.5, -6.12, -5.92);
+          bookRow(true, x1 + 0.05, x2 - 0.05, L + 0.08 + i * 0.5, -5.88, -5.68);
+        }
+        block(k, x1, x2, -6.15, -5.65);
       }
+      // 대출 데스크 + 모니터 + 도장, 사서 선생님 자리
+      B.box('lectern', 'deco', -3.6, -1.5, L, L + 0.95, -7.9, -7.3);
+      B.box('white', 'deco', -3.65, -1.45, L + 0.95, L + 0.99, -7.95, -7.25);
+      B.box('beige', 'deco', -3.0, -2.6, L + 0.99, L + 1.35, -8.0, -7.6);
+      B.box('screen', 'deco', -2.98, -2.62, L + 1.05, L + 1.31, -7.6, -7.59);
+      B.box('red', 'deco', -2.1, -1.95, L + 0.99, L + 1.05, -7.6, -7.45);
+      block(k, -3.65, -1.45, -7.95, -7.25);
+      const desk = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.3), new THREE.MeshBasicMaterial({ map: textTex(240, 60, '#3f7e4e', '#ffffff', ['대출 · 반납'], 34) }));
+      desk.position.set(-2.55, L + 0.75, -7.24);
+      scene.add(desk);
+      staffSeats.push({ room: 'library', level: k, x: -2.55, z: -8.45, seatY: L + 0.5, ry: 0, role: 'librarian' });
+      // 반납함
+      B.box('blue', 'deco', 1.3, 1.9, L, L + 0.8, -8.5, -8.0);
+      B.box('tv', 'deco', 1.4, 1.8, L + 0.6, L + 0.64, -8.0, -7.99);
+      block(k, 1.3, 1.9, -8.5, -8.0);
+      // 열람 탁자 2개 + 의자 (앉을 수 있음)
+      for (const tz of [-3.9, -1.6]) {
+        B.box('deskTop', 'deco', -1.8, 1.8, L + 0.72, L + 0.77, tz - 0.45, tz + 0.45);
+        for (const lx of [-1.6, 1.6]) B.box('metal', 'deco', lx - 0.04, lx + 0.04, L, L + 0.72, tz - 0.35, tz + 0.35);
+        block(k, -1.8, 1.8, tz - 0.45, tz + 0.45);
+        for (const cx of [-1.15, 0, 1.15]) {
+          for (const [cz, ry] of [[tz - 0.8, 0], [tz + 0.8, Math.PI]]) {
+            if (cz > -0.75) continue; // 창가 쪽 의자는 생략
+            B.box('chair', 'chair', cx - 0.2, cx + 0.2, L + 0.42, L + 0.46, cz - 0.19, cz + 0.19);
+            const bz = ry === 0 ? cz - 0.19 : cz + 0.17;
+            B.box('chair', 'chair', cx - 0.19, cx + 0.19, L + 0.46, L + 0.86, bz, bz + 0.03);
+            for (const lz of [cz - 0.16, cz + 0.16]) B.box('metal', 'deco', cx - 0.17, cx + 0.17, L, L + 0.42, lz - 0.01, lz + 0.01);
+            chairs.push({ x: cx, z: cz, seatY: L + 0.45, ry, level: k, room: 'library' });
+          }
+        }
+        B.box('ginkgo', 'deco', -0.9, -0.6, L + 0.77, L + 0.8, tz - 0.25, tz - 0.05);
+        B.box('blue', 'deco', 0.4, 0.7, L + 0.77, L + 0.82, tz + 0.05, tz + 0.25);
+      }
+      // 잡지꽂이 (창가)
+      const rack = new THREE.BoxGeometry(1.2, 1.0, 0.08);
+      rack.rotateX(-0.3);
+      B.geo('shelf', 'deco', rack, 3.0, L + 0.6, -1.05);
+      for (let i = 0; i < 4; i++) B.box(bookCols[i + 1], 'deco', 2.5 + i * 0.28, 2.75 + i * 0.28, L + 0.45, L + 0.85, -0.95, -0.9);
+      block(k, 2.35, 3.65, -1.3, -0.7);
+      // 표어 · 조용히
+      const motto = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.5), new THREE.MeshBasicMaterial({ map: textTex(600, 100, '#f7f2e2', '#3b5a8a', ['책 속에 길이 있다'], 54, '#7a5532') }));
+      motto.position.set(1.3, L + 2.55, Z_CORR + 0.13);
+      scene.add(motto);
+      const quiet = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.3), new THREE.MeshBasicMaterial({ map: textTex(240, 80, '#c8473d', '#ffffff', ['쉿! 조용히'], 40) }));
+      quiet.rotation.y = -Math.PI / 2;
+      quiet.position.set(hall.xe - 0.52, L + 2.45, -4.6);
+      scene.add(quiet);
     }
     const sign = new THREE.Mesh(
       signGeo,

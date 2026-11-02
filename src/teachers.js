@@ -98,6 +98,12 @@ export const STAFF = {
     lines: ['체육복 챙겨 왔지?', '다음 시간 운동장 집합!', '줄 똑바로 서라~'],
     greet: '오~ 왔냐!',
   },
+  librarian: {
+    name: '사서 선생님',
+    look: { outfit: 'beige', hair: 'bob', hairColor: 'black', acc: 'glasses' },
+    lines: ['도서실에선 조용히~', '대출 기간은 2주야', '다 읽은 책은 반납함에 넣어 주렴', '새로 들어온 책 구경해 볼래?'],
+    greet: '어서 와, 책 빌리러 왔니?',
+  },
   nurse: {
     name: '보건 선생님',
     color: '#f2f2ee',
@@ -199,7 +205,7 @@ export function createTeachers({ scene, world }) {
     }
     // 직원 NPC (시간과 관계없이 늘 자리에)
     for (const seat of world.staffSeats) {
-      const room = CLASSROOMS.find((c) => c.id === seat.room);
+      const room = CLASSROOMS.find((c) => c.id === seat.room) || { id: seat.room, level: seat.level, loose: true };
       const id = `staff-${seat.role}`;
       const near = inBuilding && room.level === k && Math.abs(seat.x - me.pos.x) < 26;
       if (near && !active.has(id)) spawnStaff(id, room, seat);
@@ -222,7 +228,8 @@ export function createTeachers({ scene, world }) {
     for (const t of active.values()) {
       const a = t.avatar;
       const xs = t.room.xs;
-      const here = myRoomId === t.room.id;
+      // 교실이 아닌 곳(도서실 등)은 가까이(5m) 오면 말 걸기
+      const here = t.room.loose ? Math.hypot(me.pos.x - t.avatar.pos.x, me.pos.z - t.avatar.pos.z) < 5 && Math.abs(me.pos.y - t.avatar.pos.y) < 1.5 : myRoomId === t.room.id;
       t.nextMove -= dt;
       t.nextTalk -= dt;
       if (t.writing > 0) t.writing -= dt;

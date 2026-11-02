@@ -6,7 +6,7 @@
 //            ?room=우리학교&teacher=1  → 선생님 이름표로 입장
 import * as THREE from 'three';
 import './school.css';
-import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX, BRIDGE } from './world.js';
+import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX, BRIDGE, HALL_NAMES } from './world.js';
 import { createSoccer } from './soccer.js';
 import { createTeachers, SUBJECTS } from './teachers.js';
 import { Avatar, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } from './avatar.js';
@@ -1073,7 +1073,8 @@ function updateWhere() {
     : inRect(BRIDGE, me.pos.x, me.pos.z) && lv === 1
       ? '구름다리'
       : null;
-  const w = r ? r.name : onRoof ? '옥상' : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.z < Z_BACK ? '뒷마당' : '운동장');
+  const hallRoom = inBuilding && !onRoof && Math.abs(me.pos.x) < 4.5 && me.pos.z > Z_CORR ? HALL_NAMES[levelOfY(me.pos.y)] : null;
+  const w = r ? r.name : onRoof ? '옥상' : hallRoom ? hallRoom : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.z < Z_BACK ? '뒷마당' : '운동장');
   if (w !== lastWhere) {
     if (r && lastWhere && !TEACHING.has(r.type)) {
       hint(r.name, 1800);
