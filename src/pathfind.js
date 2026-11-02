@@ -183,21 +183,21 @@ export function createNavigator(blocksPerLevel) {
   function stairPoints(st, k, up) {
     const L = levelY(k);
     if (st.center) {
-      // 중앙 계단: 복도 → 서쪽 끝 → 첫 단(동쪽으로) → 층계참 → 둘째 단(서쪽으로) → 서쪽 통로 → 복도
+      // 중앙 계단실: 복도 → 가운데 계단(뒤로) → 층계참 → 양옆 계단(앞으로) → 위층 복도. 올라갈 땐 서쪽, 내려올 땐 동쪽
       const C = CSTAIR;
-      const za = (C.az1 + C.az2) / 2;
-      const zb = (C.bz1 + C.bz2) / 2;
-      const cp = [
-        { x: C.xa - 0.3, z: za, y: L },
-        { x: C.xb, z: za, y: L + 1.8 },
-        { x: C.xb + 0.5, z: za, y: L + 1.8 },
-        { x: C.xb + 0.5, z: zb, y: L + 1.8 },
-        { x: C.xb, z: zb, y: L + 1.8 },
-        { x: C.xa - 0.3, z: zb, y: L + 3.6 },
+      const zl = (C.z1 + C.z2) / 2;
+      const sx = up ? -4 : 4;
+      const upPts = [
+        { x: 0, z: C.z0 + 0.2, y: L },
+        { x: 0, z: C.z1, y: L + 1.8 },
+        { x: 0, z: zl, y: L + 1.8 },
+        { x: sx, z: zl, y: L + 1.8 },
+        { x: sx, z: C.z1, y: L + 1.8 },
+        { x: sx, z: C.z0 + 0.2, y: L + 3.6 },
       ].map((p) => ({ ...p, stair: true }));
-      const entry = up ? { x: st.xA, z: st.zEntry } : { x: st.xB, z: st.zEntry };
-      const exit = up ? { x: st.xB, z: st.zEntry } : { x: st.xA, z: st.zEntry };
-      return { entry, pts: up ? cp : cp.reverse(), exit };
+      const entry = up ? { x: 0, z: st.zEntry } : { x: sx, z: st.zEntry };
+      const exit = up ? { x: sx, z: st.zEntry } : { x: 0, z: st.zEntry };
+      return { entry, pts: up ? upPts : upPts.reverse(), exit };
     }
     const pts = [
       { x: st.xA, z: st.zCorr, y: L },

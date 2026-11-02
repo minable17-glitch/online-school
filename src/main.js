@@ -144,7 +144,7 @@ const activities = createActivities({
 
 // ── 매점 아주머니 ──
 const npc = new Avatar({ id: 'store-npc', name: '매점 아주머니', color: '#c0603f', occlude: true });
-npc.pos.set((STORE.minX + STORE.maxX) / 2, 0, 5.0);
+npc.pos.set((STORE.minX + STORE.maxX) / 2, 0, STORE.minZ + 1.0);
 npc.root.rotation.y = 0;
 scene.add(npc.root);
 
@@ -786,7 +786,8 @@ const FIELD = { minX: -46, maxX: 46, minZ: 16, maxZ: 66 };
 function soundMix() {
   const { x, y, z } = me.pos;
   const k = levelOfY(y);
-  const inBuilding = Math.abs(x) < BX && z < 0 && z > Z_BACK && k < ROOF; // 옥상은 바깥처럼
+  const inBack = z <= Z_BACK && z > Z_BACK - 6 && (Math.abs(x) < 5.2 || (Math.abs(x) > BX - 7.2 && Math.abs(x) < BX)); // 뒤로 튀어나온 중앙 계단실·화장실
+  const inBuilding = Math.abs(x) < BX && z < 0 && (z > Z_BACK || inBack) && k < ROOF; // 옥상은 바깥처럼
   const room = roomAt(x, z, y);
   const inHallRoom = inBuilding && Math.abs(x) < 4.5 && z > -9;
   const dx = Math.max(FIELD.minX - x, 0, x - FIELD.maxX);
@@ -1112,7 +1113,8 @@ renderRoomLabel();
 let lastWhere = '';
 function updateWhere() {
   const r = roomAt(me.pos.x, me.pos.z, me.pos.y);
-  const inBuilding = Math.abs(me.pos.x) < BX && me.pos.z < 0 && me.pos.z > Z_BACK;
+  const inBack = me.pos.z <= Z_BACK && me.pos.z > Z_BACK - 6 && (Math.abs(me.pos.x) < 5.2 || (Math.abs(me.pos.x) > BX - 7.2 && Math.abs(me.pos.x) < BX));
+  const inBuilding = Math.abs(me.pos.x) < BX && me.pos.z < 0 && (me.pos.z > Z_BACK || inBack);
   const shop = me.pos.x > STORE.minX && me.pos.x < STORE.maxX && me.pos.z > STORE.minZ && me.pos.z < STORE.maxZ;
   const onRoof = inBuilding && levelOfY(me.pos.y) === ROOF;
   const lv = levelOfY(me.pos.y);
@@ -1124,7 +1126,8 @@ function updateWhere() {
       ? '구름다리'
       : null;
   const hallRoom = inBuilding && !onRoof && Math.abs(me.pos.x) < 4.5 && me.pos.z > Z_CORR ? HALL_NAMES[levelOfY(me.pos.y)] : null;
-  const w = r ? r.name : onRoof ? '옥상' : hallRoom ? hallRoom : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.x > OUT.wall ? '등굣길' : me.pos.z < Z_BACK ? '뒷마당' : '운동장');
+  const backName = inBack ? (Math.abs(me.pos.x) < 5.2 ? '중앙 계단' : me.pos.x < 0 ? '남자 화장실' : '여자 화장실') : null;
+  const w = r ? r.name : onRoof ? '옥상' : backName ? backName : hallRoom ? hallRoom : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.x > OUT.wall ? '등굣길' : me.pos.z < Z_BACK ? '뒷마당' : '운동장');
   if (w !== lastWhere) {
     if (r && lastWhere && !TEACHING.has(r.type)) {
       hint(r.name, 1800);
@@ -1147,7 +1150,7 @@ function groundKind() {
   const k = levelOfY(y);
   if (Math.abs(x) < BX && z < 0 && z > Z_BACK) {
     if (k === ROOF) return 'hard';
-    if (STAIRS.some((t) => x > t.xs && x < t.xe && z > Z_CORR)) return 'hard';
+    if (STAIRS.some((t) => (t.center ? z < Z_BACK : z > Z_CORR) && x > t.xs && x < t.xe)) return 'hard';
     if (Math.abs(x) < 4.5 && z > Z_CORR && k === 0) return 'hard'; // 중앙현관
     return 'wood';
   }
