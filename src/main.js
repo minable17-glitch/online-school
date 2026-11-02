@@ -6,7 +6,7 @@
 //            ?room=우리학교&teacher=1  → 선생님 이름표로 입장
 import * as THREE from 'three';
 import './school.css';
-import { buildWorld, roomAt, CLASSROOMS, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS } from './world.js';
+import { buildWorld, roomAt, CLASSROOMS, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX } from './world.js';
 import { createSoccer } from './soccer.js';
 import { createTeachers, SUBJECTS } from './teachers.js';
 import { Avatar, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } from './avatar.js';
@@ -19,6 +19,7 @@ import { createAmbience } from './ambience.js';
 const params = new URLSearchParams(location.search);
 const room = (params.get('room') || '우리학교').slice(0, 30);
 const isTeacher = params.get('teacher') === '1';
+const DEBUG = params.get('debug') === '1';
 const startClass = CLASSROOMS.find((c) => c.id === params.get('class'));
 if (params.get('debug') === '1' && params.get('time') != null) setTestTime(params.get('time'));
 
@@ -294,8 +295,16 @@ const roomLabel = document.getElementById('roomLabel');
 const netDot = document.getElementById('netDot');
 let netStatus = 'connecting';
 let whereText = '';
+let instanceNo = 0;
 function renderRoomLabel() {
-  const who = netStatus === 'solo' && peopleCount < 2 ? '혼자 모드' : `${peopleCount}명`;
+  const who =
+    netStatus === 'solo' && peopleCount < 2
+      ? '혼자 모드'
+      : netStatus === 'full'
+        ? '방이 모두 가득 찼어요'
+        : netStatus === 'connecting'
+          ? '연결 중…'
+          : `${instanceNo ? `${instanceNo}번 방 · ` : ''}${peopleCount}명`;
   roomLabel.textContent = `${room} · ${who}${whereText ? ` · ${whereText}` : ''}`;
   netDot.classList.toggle('on', netStatus === 'online');
 }
@@ -453,13 +462,14 @@ canvas.addEventListener(
   { passive: false },
 );
 
-const tapTargets = [soccer.mesh, ...world.walkables, ...world.tapBlockers, ...world.chairMeshes];
+const tapTargets = [soccer.mesh, ...world.walkables, ...world.tapBlockers, ...world.chairMeshes, ...world.stairMeshes];
 const tmpN = new THREE.Vector3();
 
 function handleTap(cx, cy) {
   const ndc = new THREE.Vector2((cx / window.innerWidth) * 2 - 1, -(cy / window.innerHeight) * 2 + 1);
   raycaster.setFromCamera(ndc, camera);
   const hit = raycaster.intersectObjects(tapTargets, false)[0];
+  if (DEBUG) console.log('tap', hit?.object.userData.role, hit && [hit.point.x.toFixed(2), hit.point.y.toFixed(2), hit.point.z.toFixed(2)].join(','));
   if (!hit) return hint('가까운 빈 바닥을 눌러주세요');
 
   // 공을 눌렀나? → 공 너머로 달려가서 차기
@@ -517,21 +527,80 @@ function handleTap(cx, cy) {
     return;
   }
 
-  // 바닥인가? (위를 향한 면만)
+  // 계단을 눌렀나? → 한 층 올라가거나 내려가기
+  if (hit.object.userData.role === 'stair') {
+    const st = STAIRS.find((t) => hit.point.x >= t.xs - 0.5 && hit.point.x <= t.xe + 0.5) || STAIRS[0];
+    const flightBase = Math.max(0, Math.min(ROOF - 1, Math.floor((hit.point.y - 0.15) / 3.6)));
+    const myLevel = levelOfY(me.pos.y);
+    const target = myLevel <= flightBase ? flightBase + 1 : flightBase;
+    return goTo({ x: st.xA, y: levelY(target), z: st.zEntry }, target);
+  }
+
+  // 벽을 눌렀나? → 벽 너머(교실 안 등)로 문을 통해 들어가기
   tmpN.copy(hit.face.normal).transformDirection(hit.object.matrixWorld);
-  if (hit.object.userData.role === 'wall' || tmpN.y < 0.5) return hint('가까운 빈 바닥을 눌러주세요');
+  if (hit.object.userData.role === 'wall' || tmpN.y < 0.5) {
+    const lvl = Math.abs(hit.point.y - me.pos.y) < 3.2 ? levelOfY(me.pos.y) : levelOfY(hit.point.y - 1.2);
+    const dir = raycaster.ray.direction;
+    // 벽 너머가 교실이면: 그 교실 앞문/뒷문 중 가까운 쪽 바로 안으로
+    const probe = { x: hit.point.x + dir.x * 1.2, z: hit.point.z + dir.z * 1.2 };
+    const r = roomAt(probe.x, probe.z, levelY(lvl)) || roomAt(hit.point.x, hit.point.z - 0.3, levelY(lvl));
+    if (r) {
+      const doorX = [r.xs + 1.45, r.xe - 1.45].sort((a, b) => Math.abs(a - me.pos.x) - Math.abs(b - me.pos.x))[0];
+      return goTo({ x: doorX, y: levelY(r.level), z: Z_CORR + 0.5 }, r.level);
+    }
+    for (const step of [1.0, 1.8, 2.8, 4, 5.5]) {
+      const q = { x: hit.point.x + dir.x * step, y: levelY(lvl), z: hit.point.z + dir.z * step };
+      if (!nav.blockedAt(q.x, q.z, q.y)) return goTo(q, lvl);
+    }
+    return hint('가까운 빈 바닥을 눌러주세요');
+  }
+
+  // 바닥
   const p = hit.point;
   if (nav.blockedAt(p.x, p.z, p.y)) return hint('가까운 빈 바닥을 눌러주세요');
+  goTo({ x: p.x, y: p.y, z: p.z }, levelOfY(p.y));
+}
+
+// 목적지로 걸어가기 (층이 다르면 계단으로)
+function goTo(dest, level) {
   pendingChair = null;
-  const dest = { x: p.x, y: p.y, z: p.z };
   me.finalDest = dest;
   if (!walkTo(me, dest)) return hint('가까운 빈 바닥을 눌러주세요');
   me.onArrive = () => {
     me.finalDest = null;
   };
-  if (levelOfY(p.y) !== levelOfY(me.pos.y)) hint(`${levelOfY(p.y) + 1}층으로 계단을 이용해요`, 1600);
-  showMarker(p);
+  if (level !== levelOfY(me.pos.y)) hint(level === ROOF ? '옥상으로 올라가요' : `${level + 1}층으로 가요`, 1600);
+  showMarker(dest);
   announce();
+}
+
+// ── 계단 근처: 위층 / 아래층 버튼 ──
+const upBtn = document.getElementById('upBtn');
+const downBtn = document.getElementById('downBtn');
+const stairBar = document.getElementById('stairBar');
+function nearStair() {
+  const { x, z } = me.pos;
+  if (z > Z_CORR + 0.5 || z < Z_BACK) return null;
+  return STAIRS.find((t) => x > t.xs - 2.5 && x < t.xe + 2.5) || null;
+}
+function updateStairBar() {
+  const st = nearStair();
+  const k = levelOfY(me.pos.y);
+  const show = !!st && !me.target?.stair;
+  stairBar.classList.toggle('hidden', !show);
+  if (!show) return;
+  upBtn.classList.toggle('hidden', k >= ROOF);
+  downBtn.classList.toggle('hidden', k <= 0);
+  upBtn.textContent = k + 1 === ROOF ? '⬆ 옥상으로' : `⬆ ${k + 2}층으로`;
+  downBtn.textContent = k - 1 === 0 ? '⬇ 1층으로' : `⬇ ${k}층으로`;
+}
+for (const [btn, d] of [[upBtn, 1], [downBtn, -1]]) {
+  btn.addEventListener('click', () => {
+    const st = nearStair();
+    if (!st) return;
+    const target = Math.max(0, Math.min(ROOF, levelOfY(me.pos.y) + d));
+    goTo({ x: d > 0 ? st.xB : st.xA, y: levelY(target), z: st.zEntry }, target);
+  });
 }
 
 // 누른 곳 표시 (작은 동그라미)
@@ -621,7 +690,7 @@ const FIELD = { minX: -46, maxX: 46, minZ: 16, maxZ: 66 };
 function soundMix() {
   const { x, y, z } = me.pos;
   const k = levelOfY(y);
-  const inBuilding = Math.abs(x) < 56.5 && z < 0 && z > -12 && k < ROOF; // 옥상은 바깥처럼
+  const inBuilding = Math.abs(x) < BX && z < 0 && z > Z_BACK && k < ROOF; // 옥상은 바깥처럼
   const room = roomAt(x, z, y);
   const inHallRoom = inBuilding && Math.abs(x) < 4.5 && z > -9;
   const dx = Math.max(FIELD.minX - x, 0, x - FIELD.maxX);
@@ -904,6 +973,11 @@ function start() {
       netStatus = s;
       renderRoomLabel();
     },
+    onInstance(n) {
+      instanceNo = n;
+      renderRoomLabel();
+    },
+    preferInstance: params.get('instance'),
   });
   renderRoomLabel();
   setTimeout(() => hint('가까운 빈 바닥을 눌러주세요', 2600), 400);
@@ -917,11 +991,12 @@ function start() {
   setInterval(() => updatePeriod(false), 1000);
 
   // 주기적으로 내 위치 알림 + 오래 소식 없는 친구 정리
+  // (서버 사용량을 아끼려고 12초마다, 위치만)
   setInterval(() => {
-    announce();
+    net.send('state', myState());
     const now = performance.now();
-    for (const [id, o] of others) if (now - o.lastSeen > 30000) onLeave(id);
-  }, 5000);
+    for (const [id, o] of others) if (now - o.lastSeen > 45000) onLeave(id);
+  }, 12000);
   window.addEventListener('pagehide', () => net.close());
 }
 renderRoomLabel();
@@ -930,11 +1005,11 @@ renderRoomLabel();
 let lastWhere = '';
 function updateWhere() {
   const r = roomAt(me.pos.x, me.pos.z, me.pos.y);
-  const inBuilding = Math.abs(me.pos.x) < 56.5 && me.pos.z < 0 && me.pos.z > -12;
+  const inBuilding = Math.abs(me.pos.x) < BX && me.pos.z < 0 && me.pos.z > Z_BACK;
   const shop = me.pos.x > STORE.minX && me.pos.x < STORE.maxX && me.pos.z > STORE.minZ && me.pos.z < STORE.maxZ;
   const onRoof = inBuilding && levelOfY(me.pos.y) === ROOF;
   const annex = inRect(GYM, me.pos.x, me.pos.z) ? '체육관' : inRect(CAFE, me.pos.x, me.pos.z) ? '급식실' : null;
-  const w = r ? r.name : onRoof ? '옥상' : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.z < -12 ? '뒷마당' : '운동장');
+  const w = r ? r.name : onRoof ? '옥상' : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.z < Z_BACK ? '뒷마당' : '운동장');
   if (w !== lastWhere) {
     if (r && lastWhere) {
       const sub = teachers.subjectOf(r);
@@ -971,6 +1046,7 @@ function frame() {
     updateWhere();
     updateStore();
     updateAnnex();
+    updateStairBar();
     teachers.sync(me);
     scorePill.classList.toggle('hidden', lastWhere !== '운동장');
     ambience?.setMix(soundMix());

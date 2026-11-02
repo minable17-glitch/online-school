@@ -121,7 +121,7 @@ export function createTeachers({ scene, world }) {
       for (const id of [...active.keys()]) despawn(id);
     }
     const k = levelOfY(me.pos.y);
-    const inBuilding = me.pos.z < 1 && me.pos.z > -13;
+    const inBuilding = me.pos.z < 1 && me.pos.z > -15;
     for (const room of CLASSROOMS) {
       const sub = subjectOf(room, period);
       const near = inBuilding && room.level === k && Math.abs((room.xs + room.xe) / 2 - me.pos.x) < 26;

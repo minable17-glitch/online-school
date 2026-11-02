@@ -15,10 +15,10 @@ const SLOT = 9; // 교실 가로
 const STAIR_W = 7; // 계단실 가로
 const HALL_W = 9; // 가운데(현관/교무실/도서실)
 const Z_FRONT = 0; // 운동장 쪽 벽
-const Z_CORR = -9; // 교실 / 복도 경계
-const Z_BACK = -12; // 건물 뒤쪽 벽
+export const Z_CORR = -9; // 교실 / 복도 경계
+export const Z_BACK = -14; // 건물 뒤쪽 벽 (복도 폭 5m)
 const FLIGHT_END = -1.6; // 계단 층계참 시작
-const BX = (2 * STAIR_W + 10 * SLOT + HALL_W) / 2; // 건물 반폭 = 56.5
+export const BX = (2 * STAIR_W + 10 * SLOT + HALL_W) / 2; // 건물 반폭 = 56.5
 
 // 가로 방향 칸 배치: 계단 | 1~5반 | 가운데 | 6~10반 | 계단
 const SLOTS = [];
@@ -216,7 +216,7 @@ function createBatcher() {
       push(mat, role, g);
     },
     build(scene, mats) {
-      const out = { floor: [], wall: [], glass: [], chair: [], deco: [] };
+      const out = { floor: [], wall: [], glass: [], chair: [], deco: [], stair: [] };
       for (const { mat, role, geos } of groups.values()) {
         const m = mats[mat];
         for (const g of geos) {
@@ -481,7 +481,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
       } else windowWall(k, s.xs, s.xe, Z_BACK, Z_BACK + WALL_T);
       // 교실/복도 경계 벽
       if (s.type === 'class') {
-        wallWithDoors(k, s.xs, s.xe, Z_CORR - 0.1, Z_CORR + 0.1, [[s.xs + 0.7, s.xs + 2.1], [s.xe - 2.1, s.xe - 0.7]]);
+        wallWithDoors(k, s.xs, s.xe, Z_CORR - 0.1, Z_CORR + 0.1, [[s.xs + 0.5, s.xs + 2.4], [s.xe - 2.4, s.xe - 0.5]]);
       } else if (s.type === 'hall' && k > 0) {
         wallWithDoors(k, s.xs, s.xe, Z_CORR - 0.1, Z_CORR + 0.1, [[-0.8, 0.8]]);
       }
@@ -538,11 +538,11 @@ export function buildWorld(scene, { menu = [] } = {}) {
       const L = levelY(k);
       for (let i = 0; i < STEPS; i++) {
         const topA = L + 0.15 * (i + 1);
-        B.box('terrazzo', 'deco', st.xs + 0.2, st.mid - 0.1, Math.max(L, topA - 0.45), topA, Z_CORR + run * i, Z_CORR + run * (i + 1));
+        B.box('terrazzo', 'stair', st.xs + 0.2, st.mid - 0.1, Math.max(L, topA - 0.45), topA, Z_CORR + run * i, Z_CORR + run * (i + 1));
         const topB = L + 1.8 + 0.15 * (i + 1);
-        B.box('terrazzo', 'deco', st.mid + 0.1, st.xe - 0.2, topB - 0.45, topB, FLIGHT_END - run * (i + 1), FLIGHT_END - run * i);
+        B.box('terrazzo', 'stair', st.mid + 0.1, st.xe - 0.2, topB - 0.45, topB, FLIGHT_END - run * (i + 1), FLIGHT_END - run * i);
       }
-      B.box('terrazzo', 'deco', st.xs + 0.2, st.xe - 0.2, L + 1.6, L + 1.8, FLIGHT_END, Z_FRONT - WALL_T); // 층계참
+      B.box('terrazzo', 'stair', st.xs + 0.2, st.xe - 0.2, L + 1.6, L + 1.8, FLIGHT_END, Z_FRONT - WALL_T); // 층계참
       // 난간
       const len = FLIGHT_END - Z_CORR;
       for (const [x, up] of [[st.mid - 0.15, true], [st.mid + 0.15, false]]) {
@@ -800,7 +800,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
     for (const lx of [-2.5, 2.5]) for (const lz of [-7, -2]) B.box('lamp', 'deco', lx - 0.6, lx + 0.6, L + 3.32, L + 3.38, lz - 0.08, lz + 0.08);
   }
   // 복도 형광등
-  for (let k = 0; k < LEVELS; k++) for (let x = -BX + 4; x < BX - 3; x += 6) B.box('lamp', 'deco', x - 0.6, x + 0.6, levelY(k) + 3.32, levelY(k) + 3.38, -10.6, -10.44);
+  for (let k = 0; k < LEVELS; k++) for (let x = -BX + 4; x < BX - 3; x += 6) B.box('lamp', 'deco', x - 0.6, x + 0.6, levelY(k) + 3.32, levelY(k) + 3.38, (Z_BACK + Z_CORR) / 2 - 0.08, (Z_BACK + Z_CORR) / 2 + 0.08);
 
   // 가운데 시계탑 + 학교 이름
   const towerTop = levelY(LEVELS) + 3.2;
@@ -1178,7 +1178,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
   }
 
   // 본관 뒷문 → 별관 가는 길
-  B.box('concrete', 'deco', -2.5, 2.5, 0, 0.03, -22, -12);
+  B.box('concrete', 'deco', -2.5, 2.5, 0, 0.03, -22, Z_BACK);
 
   // 점수판 (운동장 동쪽 끝, 축구 점수 표시)
   const scoreC = document.createElement('canvas');
@@ -1302,6 +1302,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
     occluders: [...built.wall, ...built.floor, ...built.glass],
     tapBlockers: built.wall,
     chairMeshes: built.chair,
+    stairMeshes: built.stair,
     chairs,
     blocks,
     heightAt,

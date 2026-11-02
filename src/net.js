@@ -6,60 +6,99 @@ import { createClient } from '@supabase/supabase-js';
 const URL = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export function connectRoom({ room, me, onState, onAction, onBall, onLeave, onCount, onStatus }) {
+// 한 방(인스턴스)에 들어갈 수 있는 최대 인원. 꽉 차면 2번 방, 3번 방… 으로 자동 배정
+export const ROOM_CAPACITY = 50;
+const MAX_INSTANCES = 20;
+
+export function connectRoom({ room, me, onState, onAction, onBall, onLeave, onCount, onStatus, onInstance, preferInstance }) {
   if (!URL || !KEY) return connectLocal({ room, me, onState, onAction, onBall, onLeave, onCount, onStatus });
 
   const supabase = createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  const channel = supabase.channel(`school-${room}`, {
-    config: { presence: { key: me.id }, broadcast: { self: false } },
-  });
-
+  let channel = null;
   let ready = false;
+  let closed = false;
   const queue = [];
 
   const send = (event, payload) => {
-    if (!ready) {
+    if (!ready || !channel) {
       if (queue.length < 20) queue.push([event, payload]);
       return;
     }
     channel.send({ type: 'broadcast', event, payload: { ...payload, id: me.id } });
   };
 
-  channel
-    .on('broadcast', { event: 'state' }, ({ payload }) => onState(payload))
-    .on('broadcast', { event: 'act' }, ({ payload }) => onAction(payload))
-    .on('broadcast', { event: 'ball' }, ({ payload }) => onBall(payload))
-    .on('presence', { event: 'sync' }, () => {
-      onCount(Object.keys(channel.presenceState()).length);
-    })
-    .on('presence', { event: 'join' }, ({ key }) => {
-      // 새 친구가 들어오면 내 현재 상태를 한 번 알려줌
-      if (key !== me.id) me.announce?.();
-    })
-    .on('presence', { event: 'leave' }, ({ key }) => onLeave(key))
-    .subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
+  // n번 방에 들어가 보기: 이미 꽉 찼으면 false
+  function tryJoin(n) {
+    return new Promise((resolve) => {
+      const ch = supabase.channel(`school-${room}-${n}`, {
+        config: { presence: { key: me.id }, broadcast: { self: false } },
+      });
+      let decided = false;
+      const decide = async () => {
+        if (decided || closed) return;
+        decided = true;
+        const others = Object.keys(ch.presenceState()).filter((k) => k !== me.id).length;
+        if (others >= ROOM_CAPACITY) {
+          await supabase.removeChannel(ch);
+          resolve(false);
+          return;
+        }
+        channel = ch;
         ready = true;
+        onInstance?.(n);
         onStatus?.('online');
-        await channel.track({ name: me.name, teacher: !!me.teacher });
+        await ch.track({ name: me.name, teacher: !!me.teacher });
         while (queue.length) {
           const [e, p] = queue.shift();
           send(e, p);
         }
         me.announce?.();
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        ready = false;
-        onStatus?.('offline');
-      }
+        resolve(true);
+      };
+      ch.on('broadcast', { event: 'state' }, ({ payload }) => channel === ch && onState(payload))
+        .on('broadcast', { event: 'act' }, ({ payload }) => channel === ch && onAction(payload))
+        .on('broadcast', { event: 'ball' }, ({ payload }) => channel === ch && onBall(payload))
+        .on('presence', { event: 'sync' }, () => {
+          if (!decided) return decide();
+          if (channel === ch) onCount(Object.keys(ch.presenceState()).length);
+        })
+        .on('presence', { event: 'join' }, ({ key }) => {
+          // 새 친구가 들어오면 내 현재 상태를 한 번 알려줌
+          if (channel === ch && key !== me.id) me.announce?.();
+        })
+        .on('presence', { event: 'leave' }, ({ key }) => channel === ch && onLeave(key))
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            // 지금 몇 명 있는지(presence)가 도착하면 결정. 아무도 없어서 안 오면 2초 뒤 결정
+            setTimeout(decide, 2000);
+          } else if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') && channel === ch) {
+            ready = false;
+            onStatus?.('offline');
+          } else if (status === 'CHANNEL_ERROR' && !decided) {
+            decided = true;
+            onStatus?.('offline');
+            resolve(true);
+          }
+        });
     });
+  }
+
+  (async () => {
+    const start = Math.max(1, Math.min(MAX_INSTANCES, Number(preferInstance) || 1));
+    for (let n = start; n <= MAX_INSTANCES && !closed; n++) {
+      if (await tryJoin(n)) return;
+    }
+    onStatus?.('full');
+  })();
 
   return {
     send,
     updateMe() {
-      if (ready) channel.track({ name: me.name, teacher: !!me.teacher });
+      if (ready && channel) channel.track({ name: me.name, teacher: !!me.teacher });
     },
     close() {
-      supabase.removeChannel(channel);
+      closed = true;
+      if (channel) supabase.removeChannel(channel);
     },
   };
 }

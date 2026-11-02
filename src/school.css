@@ -269,3 +269,13 @@ button { font: inherit; cursor: pointer; }
 .chip .sw { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); }
 .chip.on { background: #3f7e4e; border-color: #3f7e4e; color: #fff; }
 .sheet-card .done { background: #3f7e4e; color: #fff; font-weight: 600; }
+
+.stair-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 104px);
+  display: flex;
+  gap: 10px;
+}
+.stair-bar .pill { background: rgba(63, 126, 78, 0.88); font-size: 16px; font-weight: 600; padding: 11px 18px; }
