@@ -477,30 +477,64 @@ export function createAmbience() {
     } catch {
       return;
     }
-    for (const [name, file] of Object.entries(map)) {
-      if (typeof file !== 'string' || !file) continue;
+    const load = async (file) => {
+      const res = await fetch(base + encodeURIComponent(file));
+      if (!res.ok) throw new Error(file);
+      return c.decodeAudioData(await res.arrayBuffer());
+    };
+    for (const [name, files] of Object.entries(map)) {
+      const list = (Array.isArray(files) ? files : [files]).filter((f) => typeof f === 'string' && f);
+      if (!list.length) continue;
       try {
-        const res = await fetch(base + encodeURIComponent(file));
-        if (!res.ok) continue;
-        const buf = await c.decodeAudioData(await res.arrayBuffer());
+        const bufs = (await Promise.all(list.map((f) => load(f).catch(() => null)))).filter(Boolean);
+        if (!bufs.length) continue;
         if (name === 'bell') {
-          setBellSample(buf);
+          setBellSample(bufs[0]);
           continue;
         }
         const bus = buses[name];
         if (!bus) continue;
-        const src = c.createBufferSource();
-        src.buffer = buf;
-        src.loop = true;
-        const g = c.createGain();
-        g.gain.value = 0.8;
-        src.connect(g).connect(bus.input);
-        src.start(0, Math.random() * buf.duration);
+        playVariants(bus, bufs);
         bus.sample = true;
       } catch {
         /* 파일이 이상하면 합성 소리 그대로 */
       }
     }
+  }
+
+  // 녹음 파일 재생: 하나면 계속 반복, 여러 개면 무작위로 바꿔 가며 2초씩 겹쳐 자연스럽게 이어 붙임
+  function playVariants(bus, bufs) {
+    if (bufs.length === 1) {
+      const src = c.createBufferSource();
+      src.buffer = bufs[0];
+      src.loop = true;
+      const g = c.createGain();
+      g.gain.value = 0.8;
+      src.connect(g).connect(bus.input);
+      src.start(0, Math.random() * bufs[0].duration);
+      return;
+    }
+    let last = -1;
+    const X = 2; // 겹치는 시간(초)
+    const next = (when) => {
+      let i = Math.floor(Math.random() * bufs.length);
+      if (i === last) i = (i + 1) % bufs.length;
+      last = i;
+      const buf = bufs[i];
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.linearRampToValueAtTime(0.8, when + X);
+      g.gain.setValueAtTime(0.8, when + buf.duration - X);
+      g.gain.linearRampToValueAtTime(0.0001, when + buf.duration);
+      src.connect(g).connect(bus.input);
+      src.start(when);
+      src.stop(when + buf.duration + 0.05);
+      const startNext = when + buf.duration - X;
+      setTimeout(() => next(startNext), Math.max(0, (startNext - c.currentTime - 1) * 1000));
+    };
+    next(c.currentTime + 0.05);
   }
 
   return {

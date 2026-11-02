@@ -781,7 +781,7 @@ function soundMix() {
   const inShop = x > STORE.minX && x < STORE.maxX && z > STORE.minZ && z < STORE.maxZ;
   // 점심시간엔 급식실이 시끌벅적
   const lunch = schoolNow().kind === 'lunch';
-  const cafeLevel = lunch ? 1 : 0.35;
+  const cafeLevel = lunch ? 1 : 0.12; // 점심때만 북적
   if (inRect(GYM, x, z) && k === 1) {
     mix.gym = [1, open];
     mix.field = [0.15, muffled];
