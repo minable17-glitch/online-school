@@ -35,7 +35,7 @@ export function createAmbience() {
 
   // 장소별 소리 통로: 소리 → 크기 → 먹먹함(저역통과) → 스피커 (+ 실내는 울림)
   const buses = {};
-  for (const [name, wet] of Object.entries({ field: 0, outdoor: 0, classroom: 0.25, corridor: 0.6, office: 0.25, library: 0.3, gym: 0.9, cafe: 0.3, teacher: 0.25, music: 0.35 })) {
+  for (const [name, wet] of Object.entries({ field: 0, outdoor: 0, classroom: 0.25, corridor: 0.6, office: 0.25, library: 0.3, gym: 0.9, cafe: 0.3, teacher: 0.25, music: 0.35, bgm: 0 })) {
     const input = c.createGain();
     const gain = c.createGain();
     gain.gain.value = 0;
@@ -550,7 +550,7 @@ export function createAmbience() {
       for (const [name, bus] of Object.entries(buses)) {
         const [lvl, cutoff] = mix[name] || [0, 16000];
         bus.level = lvl;
-        bus.gain.gain.setTargetAtTime(lvl, t, 0.4);
+        bus.gain.gain.setTargetAtTime(lvl, t, name === 'bgm' ? 1.5 : 0.4);
         bus.lp.frequency.setTargetAtTime(cutoff, t, 0.4);
       }
     },

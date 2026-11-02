@@ -796,6 +796,12 @@ function soundMix() {
   const open = 16000;
   const muffled = 650;
   const mix = {};
+  // 잔잔한 배경 음악 (sounds.json 의 bgm): 바깥은 조금 크게, 실내 수업 중엔 아주 작게
+  {
+    const kind = schoolNow().kind;
+    const quiet = inBuilding && (kind === 'class' || room);
+    mix.bgm = [quiet ? 0.07 : 0.16, open];
+  }
   const inShop = x > STORE.minX && x < STORE.maxX && z > STORE.minZ && z < STORE.maxZ;
   // 점심시간엔 급식실이 시끌벅적
   const lunch = schoolNow().kind === 'lunch';
