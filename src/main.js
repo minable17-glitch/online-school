@@ -10,7 +10,7 @@ import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOf
 import { createSoccer } from './soccer.js';
 import { createTeachers, SUBJECTS } from './teachers.js';
 import { createEvents, TREATS } from './events.js';
-import { Avatar, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } from './avatar.js';
+import { Avatar, AVATAR_SCALE, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } from './avatar.js';
 import { schoolNow, todayMenu, setTestTime } from './schedule.js';
 import { createNavigator } from './pathfind.js';
 import { connectRoom } from './net.js';
@@ -177,7 +177,7 @@ function nearestHoop(p) {
 // from 아바타에서 hoop 으로 공 던지기 (ok: 골인 여부)
 function launchShot(avatar, hoopIndex, ok) {
   const h = HOOPS[hoopIndex];
-  const start = new THREE.Vector3(avatar.pos.x, avatar.pos.y + 1.9, avatar.pos.z);
+  const start = new THREE.Vector3(avatar.pos.x, avatar.pos.y + 1.9 * AVATAR_SCALE, avatar.pos.z);
   const d = Math.hypot(h.x - start.x, h.z - start.z);
   const end = ok ? new THREE.Vector3(h.x, h.y, h.z) : new THREE.Vector3(h.x + (Math.random() - 0.5) * 0.5, h.y + 0.05, h.z + (Math.random() < 0.5 ? -0.3 : 0.3));
   const mesh = new THREE.Mesh(ballGeo, ballMat);
@@ -244,7 +244,7 @@ function sitOn(avatar, index) {
   avatar.pos.z = chair.z;
 }
 function standUp(avatar) {
-  if (avatar.sitChair) avatar.pos.y = avatar.sitChair.seatY - 0.45;
+  if (avatar.sitChair) avatar.pos.y = avatar.sitChair.seatY - 0.45 * AVATAR_SCALE;
   avatar.sitChair = null;
   avatar.sitChairIndex = null;
 }
@@ -268,11 +268,11 @@ function walkTo(avatar, dest, chairIndex = null) {
 let inStore = false;
 
 // ── 카메라 (내 아바타 뒤를 따라감, 끌어서 회전) ──
-const cam = { yaw: startClass ? 0 : me.root.rotation.y + Math.PI, pitch: 0.42, dist: 7.5, cur: 7.5, focus: new THREE.Vector3() };
+const cam = { yaw: startClass ? 0 : me.root.rotation.y + Math.PI, pitch: 0.4, dist: 6.5, cur: 6.5, focus: new THREE.Vector3() };
 if (startClass) cam.yaw = Math.PI / 2;
 const camRay = new THREE.Raycaster();
 function updateCamera(dt) {
-  const target = new THREE.Vector3(me.pos.x, me.pos.y + 1.3, me.pos.z);
+  const target = new THREE.Vector3(me.pos.x, me.pos.y + 1.3 * AVATAR_SCALE, me.pos.z);
   cam.focus.lerp(target, Math.min(1, dt * 8));
   // 매점 안은 좁아서 카메라를 가까이, 조금 위에서 내려다보게
   const pitch = inStore ? Math.max(cam.pitch, 0.55) : cam.pitch;
@@ -580,7 +580,7 @@ function sitAt(idx) {
   if (taker === me) return;
   const c = world.chairs[idx];
   pendingChair = idx;
-  const dest = { x: c.x, y: c.seatY - 0.45, z: c.z };
+  const dest = { x: c.x, y: c.seatY - 0.45 * AVATAR_SCALE, z: c.z };
   me.finalDest = dest;
   if (walkTo(me, dest, idx)) {
     const done = me.onArrive;
@@ -1226,7 +1226,7 @@ function frame() {
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
-cam.focus.set(me.pos.x, me.pos.y + 1.3, me.pos.z);
+cam.focus.set(me.pos.x, me.pos.y + 1.3 * AVATAR_SCALE, me.pos.z);
 frame();
 
 // 자동 점검용 (주소에 debug=1 이 있을 때만)

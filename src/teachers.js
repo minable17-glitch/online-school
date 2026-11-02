@@ -271,7 +271,7 @@ export function createTeachers({ scene, world }) {
       // 카메라 바로 앞이면 이름표·말풍선이 화면을 가리지 않게 숨김
       if (camPos) {
         const dx = camPos.x - a.pos.x;
-        const dy = camPos.y - (a.pos.y + 2.1);
+        const dy = camPos.y - (a.pos.y + 1.65);
         const dz = camPos.z - a.pos.z;
         a.tagHolder.visible = Math.hypot(dx, dy, dz) > 3.6;
       }

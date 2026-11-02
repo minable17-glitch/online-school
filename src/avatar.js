@@ -161,6 +161,9 @@ function hashCode(str) {
   return Math.abs(h);
 }
 
+// 아바타 전체 크기 (1 = 약 2.2m). 0.78 → 약 1.7m
+export const AVATAR_SCALE = 0.78;
+
 export class Avatar {
   constructor({ id, name, color, look, isMe = false, isTeacher = false, occlude = false }) {
     this.occlude = occlude; // true 면 이름표·말풍선이 벽에 가려짐 (NPC)
@@ -178,6 +181,7 @@ export class Avatar {
     this.fixedColor = color;
 
     const root = new THREE.Group();
+    root.scale.setScalar(AVATAR_SCALE); // 교실 높이에 비해 너무 커 보이지 않게 (약 1.7m)
     this.root = root;
 
     // 몸통(엉덩이 기준으로 숙일 수 있게)
@@ -443,7 +447,7 @@ export class Avatar {
       }
     }
 
-    const groundY = this.sitChair ? this.sitChair.seatY - 0.5 + 0.02 : heightAt(this.pos.x, this.pos.z, this.pos.y);
+    const groundY = this.sitChair ? this.sitChair.seatY - 0.5 * AVATAR_SCALE + 0.02 : heightAt(this.pos.x, this.pos.z, this.pos.y);
     // 계단에서는 바로 따라가고, 평지에서는 부드럽게
     const onStair = this.target?.stair;
     this.pos.y = onStair ? groundY : this.pos.y + (groundY - this.pos.y) * Math.min(1, dt * 12);
