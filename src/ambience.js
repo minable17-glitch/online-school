@@ -50,6 +50,8 @@ export function createAmbience() {
     }
     buses[name] = { input, gain, lp, level: 0, sample: false };
   }
+  // 건물 안에서는 합성 말소리를 쓰지 않음 (어색해서). 체육관·급식실은 공·식판 소리만
+  for (const n of ['gym', 'cafe', 'classroom', 'teacher', 'corridor', 'office', 'library']) buses[n].noVoice = true;
 
   const now = () => c.currentTime;
   const R = (a, b) => a + Math.random() * (b - a);
@@ -449,7 +451,7 @@ export function createAmbience() {
   function loop() {
     const t = now() + 0.05;
     // 진짜 녹음 파일이 있는 장소는 합성 말소리를 끔
-    const live = (b) => buses[b].level > 0.01 && !buses[b].sample;
+    const live = (b) => buses[b].level > 0.01 && !buses[b].sample && !buses[b].noVoice;
     if (live('field')) fieldVoices.forEach((v) => v.tick(t));
     if (live('teacher')) teacher.tick(t);
     if (live('classroom')) whisper.forEach((v) => v.tick(t));
@@ -461,7 +463,7 @@ export function createAmbience() {
       if (t < e.next) continue;
       e.next = t + R(e.every[0], e.every[1]);
       const b = buses[e.bus];
-      if (b.level > 0.01 && !(e.voice && b.sample)) e.fn(b.input, t + Math.random() * 0.3);
+      if (b.level > 0.01 && !(e.voice && (b.sample || b.noVoice))) e.fn(b.input, t + Math.random() * 0.3);
     }
   }
 

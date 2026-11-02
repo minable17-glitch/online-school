@@ -6,7 +6,7 @@
 //            ?room=우리학교&teacher=1  → 선생님 이름표로 입장
 import * as THREE from 'three';
 import './school.css';
-import { buildWorld, roomAt, CLASSROOMS, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX } from './world.js';
+import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX } from './world.js';
 import { createSoccer } from './soccer.js';
 import { createTeachers, SUBJECTS } from './teachers.js';
 import { Avatar, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } from './avatar.js';
@@ -724,14 +724,17 @@ function soundMix() {
     // 건물 안: 운동장 소리는 창문 너머로 작고 먹먹하게
     mix.field = [room ? 0.35 : 0.22, room ? 1200 : muffled];
     mix.outdoor = [0.12, muffled];
-    if (room) {
+    if (room && OFFICE_ROOMS.has(room.type)) {
+      mix.office = [1, open];
+      mix.corridor = [0.25, 900];
+    } else if (room) {
       const sub = teachers.subjectOf(room);
       mix.classroom = [1, open];
       mix.teacher = [sub && sub !== '음악' ? 1 : 0, open];
       mix.music = [sub === '음악' ? 1 : 0, open];
       mix.corridor = [0.25, 900];
     } else if (inHallRoom && k === 1) {
-      mix.office = [1, open];
+      mix.library = [0.6, open]; // 상담실: 조용
       mix.corridor = [0.2, 900];
     } else if (inHallRoom && k === 2) {
       mix.library = [1, open];
@@ -742,9 +745,10 @@ function soundMix() {
       mix.teacher = [0.25, 900];
       const musicRoom = CLASSROOMS.find((c) => c.type === 'music');
       if (k === musicRoom.level && teachers.subjectOf(musicRoom)) mix.music = [Math.max(0, 1 - Math.abs((musicRoom.xs + musicRoom.xe) / 2 - x) / 25) * 0.6, 1200];
-      if (k === 1 && Math.abs(x) < 14) mix.office = [0.3, 900];
     }
   }
+  // 교실·복도·사무실은 조용하게 (효과음 없음)
+  for (const key of ['classroom', 'teacher', 'corridor', 'office', 'library']) delete mix[key];
   return mix;
 }
 
@@ -1011,7 +1015,9 @@ function updateWhere() {
   const annex = inRect(GYM, me.pos.x, me.pos.z) ? '체육관' : inRect(CAFE, me.pos.x, me.pos.z) ? '급식실' : null;
   const w = r ? r.name : onRoof ? '옥상' : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.z < Z_BACK ? '뒷마당' : '운동장');
   if (w !== lastWhere) {
-    if (r && lastWhere) {
+    if (r && lastWhere && !TEACHING.has(r.type)) {
+      hint(r.name, 1800);
+    } else if (r && lastWhere) {
       const sub = teachers.subjectOf(r);
       const cls = schoolNow().kind === 'class';
       hint(`${r.name} · ${sub ? `${sub} 시간 (${SUBJECTS[sub].name})` : cls ? '자습 시간 · 선생님 없음' : '쉬는 시간'}`, 2200);

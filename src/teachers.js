@@ -48,6 +48,63 @@ export const SUBJECTS = {
     lines: ['물통 엎지르지 않게 조심~', '색깔 참 예쁘게 칠했네!', '스케치는 연하게 해보자', '다 그리면 뒤에 붙여 놓자~'],
     greet: '앞치마 입고 앉으렴~',
   },
+  과학: {
+    name: '과학 선생님',
+    color: '#f2f2ee', // 흰 실험 가운
+    look: { outfit: 'navy', hair: 'short', hairColor: 'black', acc: 'glasses' },
+    boards: ['과학 · 산과 염기\n리트머스 종이\n빨강? 파랑?', '과학 · 물질의 상태\n고체 · 액체 · 기체', '과학 · 현미경 관찰\n양파 표피 세포'],
+    lines: ['보안경 꼭 쓰고!', '알코올램프 조심해라~', '수도꼭지 잠갔지?', '관찰한 것 실험 보고서에 적자~', '장난치면 위험해요!'],
+    greet: '자리에 앉고, 실험 도구 만지지 마~',
+  },
+  정보: {
+    name: '정보 선생님',
+    look: { outfit: 'gymblue', hair: 'short', hairColor: 'dark', acc: 'glasses' },
+    boards: ['정보 · 타자 연습\n한글 300타 도전!', '정보 · 인터넷 예절\n악플 NO, 선플 YES'],
+    lines: ['게임하는 거 다 보인다~', '자리 비우면 로그아웃!', '타자 몇 타 나왔어?', '마우스 던지지 마라~'],
+    greet: '컴퓨터 켜고 자리에 앉자~',
+  },
+  가정: {
+    name: '가정 선생님',
+    look: { outfit: 'beige', hair: 'bob', hairColor: 'brown', acc: 'none' },
+    boards: ['가정 · 바느질 기초\n홈질 · 박음질 · 감침질'],
+    lines: ['바늘 조심~ 손가락 찔린다!', '재봉틀 천천히 밟아라~', '실 매듭 잘 지었네!', '다 하면 정리 정돈~'],
+    greet: '앞치마 입고 모둠별로 앉자~',
+  },
+};
+
+// 늘 자리에 계신 분들 (교장실·행정실·교무실·보건실)
+export const STAFF = {
+  principal: {
+    name: '교장 선생님',
+    look: { outfit: 'suit', hair: 'buzz', hairColor: 'black', acc: 'glasses' },
+    lines: ['허허, 공부 열심히 하고 있니?', '교장실은 처음이지? 앉아 봐라~', '복도에서 뛰면 안 된다~', '꿈을 크게 가져라!'],
+    greet: '어서 오너라~',
+  },
+  admin: {
+    name: '행정실 주무관',
+    look: { outfit: 'beige', hair: 'short', hairColor: 'dark', acc: 'none' },
+    lines: ['서류는 창구에 내 주세요~', '분실물은 여기서 찾아가요', '방과후 신청서 받습니다~'],
+    greet: '무슨 일로 왔어요?',
+  },
+  staff1: {
+    name: '담임 선생님',
+    look: { outfit: 'suit', hair: 'long', hairColor: 'dark', acc: 'glasses' },
+    lines: ['숙제 냈니?', '교무실엔 조용히~', '종례 때 보자~', '심부름 왔구나?'],
+    greet: '응, 무슨 일이니?',
+  },
+  staff2: {
+    name: '체육 선생님',
+    look: { outfit: 'gym', hair: 'buzz', hairColor: 'black', acc: 'none' },
+    lines: ['체육복 챙겨 왔지?', '다음 시간 운동장 집합!', '줄 똑바로 서라~'],
+    greet: '오~ 왔냐!',
+  },
+  nurse: {
+    name: '보건 선생님',
+    color: '#f2f2ee',
+    look: { outfit: 'navy', hair: 'bob', hairColor: 'dark', acc: 'none' },
+    lines: ['어디 아프니?', '침대에서 잠깐 쉬었다 가렴', '손 깨끗이 씻자~', '물 많이 마셔야 해!'],
+    greet: '어서 와, 어디 아파서 왔니?',
+  },
 };
 
 function hash(str) {
@@ -61,10 +118,21 @@ export function subjectOf(room, period = schoolNow()) {
   if (!room || period.kind !== 'class') return null;
   if (room.type === 'music') return '음악';
   if (room.type === 'art') return '미술';
+  if (room.type === 'science') return '과학';
+  if (room.type === 'computer') return '정보';
+  if (room.type === 'homeec') return '가정';
+  if (room.type !== 'class') return null;
   return ['수학', '국어', null][hash(`${room.id}|${period.key}`) % 3];
 }
 
 const R = (a, b) => a + Math.random() * (b - a);
+
+// 돌아다니는 선생님의 동선: 가운데 통로(hub) ↔ 둘레 지점(spots)
+const ROAM = {
+  미술: (xs) => ({ hub: { x: xs + 4.85, z: -4.6 }, spots: [{ x: xs + 1.7, z: -4.6 }, { x: xs + 7.9, z: -4.6 }, { x: xs + 4.85, z: -1.8 }, { x: xs + 4.85, z: -7.6 }] }),
+  과학: (xs) => ({ hub: { x: xs + 4.85, z: -3.25 }, spots: [{ x: xs + 2.4, z: -3.25 }, { x: xs + 7.85, z: -3.25 }, { x: xs + 4.85, z: -5.75 }, { x: xs + 4.85, z: -0.9 }] }),
+};
+ROAM.가정 = ROAM.미술;
 
 export function createTeachers({ scene, world }) {
   const active = new Map(); // 교실 id → 선생님 NPC
@@ -87,7 +155,7 @@ export function createTeachers({ scene, world }) {
 
   function spawn(room, sub) {
     const info = SUBJECTS[sub];
-    const a = new Avatar({ id: `teacher-${room.id}`, name: info.name, look: info.look, occlude: true });
+    const a = new Avatar({ id: `teacher-${room.id}`, name: info.name, look: info.look, color: info.color, occlude: true });
     const L = levelY(room.level);
     const t = { avatar: a, room, sub, L, nextMove: R(1, 4), nextTalk: R(1, 4), writing: 0, greeted: false };
     if (sub === '음악') {
@@ -95,8 +163,9 @@ export function createTeachers({ scene, world }) {
       a.pos.set(room.xs + 1.5, L, -1.5);
       a.sitChair = { seatY: L + 0.5, ry: -Math.PI / 2 };
       a.root.rotation.y = -Math.PI / 2;
-    } else if (sub === '미술') {
-      a.pos.set(room.xs + 4.85, L, -4.6);
+    } else if (ROAM[sub]) {
+      const h = ROAM[sub](room.xs).hub;
+      a.pos.set(h.x, L, h.z);
     } else {
       a.pos.set(room.xs + 0.85, L, -4.5);
       a.root.rotation.y = Math.PI / 2;
@@ -128,6 +197,24 @@ export function createTeachers({ scene, world }) {
       if (sub && near && !active.has(room.id)) spawn(room, sub);
       else if ((!sub || !near) && active.has(room.id)) despawn(room.id);
     }
+    // 직원 NPC (시간과 관계없이 늘 자리에)
+    for (const seat of world.staffSeats) {
+      const room = CLASSROOMS.find((c) => c.id === seat.room);
+      const id = `staff-${seat.role}`;
+      const near = inBuilding && room.level === k && Math.abs(seat.x - me.pos.x) < 26;
+      if (near && !active.has(id)) spawnStaff(id, room, seat);
+      else if (!near && active.has(id)) despawn(id);
+    }
+  }
+
+  function spawnStaff(id, room, seat) {
+    const info = STAFF[seat.role];
+    const a = new Avatar({ id, name: info.name, look: info.look, color: info.color, occlude: true });
+    a.pos.set(seat.x, levelY(room.level), seat.z);
+    a.sitChair = { seatY: seat.seatY, ry: seat.ry };
+    a.root.rotation.y = seat.ry;
+    scene.add(a.root);
+    active.set(id, { avatar: a, room, staff: true, seat, nextMove: 99, nextTalk: R(1, 4), writing: 0, greeted: false });
   }
 
   // 매 프레임: 걷기·말하기
@@ -140,11 +227,12 @@ export function createTeachers({ scene, world }) {
       t.nextTalk -= dt;
       if (t.writing > 0) t.writing -= dt;
 
-      if (t.sub === '미술') {
-        // 모둠 책상 사이를 돌아다니며 봐 주심 (가운데 통로를 거쳐서)
+      if (t.staff) {
+        // 직원 NPC: 자리에 앉아 계심
+      } else if (ROAM[t.sub]) {
+        // 실험대·모둠 책상 사이를 돌아다니며 봐 주심 (가운데 통로를 거쳐서)
         if (!a.target && t.nextMove <= 0) {
-          const hub = { x: xs + 4.85, z: -4.6 };
-          const spots = [{ x: xs + 1.7, z: -4.6 }, { x: xs + 7.9, z: -4.6 }, { x: xs + 4.85, z: -1.8 }, { x: xs + 4.85, z: -7.6 }];
+          const { hub, spots } = ROAM[t.sub](xs);
           const atHub = Math.hypot(a.pos.x - hub.x, a.pos.z - hub.z) < 0.3;
           a.target = atHub ? spots[Math.floor(Math.random() * spots.length)] : hub;
           a.path = [];
@@ -174,14 +262,15 @@ export function createTeachers({ scene, world }) {
       }
       if (!a.target) {
         // 서 있을 땐 학생 쪽을 보고, 판서할 땐 칠판 쪽을 봄
-        if (t.sub === '음악') a.faceAngle(-Math.PI / 2, dt);
-        else if (t.sub === '미술') a.faceAngle(Math.atan2(me.pos.x - a.pos.x, me.pos.z - a.pos.z), dt * 0.5);
+        if (t.staff) a.faceAngle(t.seat.ry, dt);
+        else if (t.sub === '음악') a.faceAngle(-Math.PI / 2, dt);
+        else if (ROAM[t.sub]) a.faceAngle(Math.atan2(me.pos.x - a.pos.x, me.pos.z - a.pos.z), dt * 0.5);
         else a.faceAngle(t.writing > 0 ? -Math.PI / 2 : Math.PI / 2, dt);
       }
 
       // 내가 같은 교실에 있을 때만 말풍선
       if (here) {
-        const info = SUBJECTS[t.sub];
+        const info = t.staff ? STAFF[t.seat.role] : SUBJECTS[t.sub];
         if (!t.greeted) {
           t.greeted = true;
           a.say(info.greet);
