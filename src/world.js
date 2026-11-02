@@ -455,6 +455,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
     tileBeige: std('#ffffff', { map: tex.tileBeige, roughness: 0.6 }, 2.5),
     tileCheck: std('#ffffff', { map: tex.tileCheck, roughness: 0.8 }, 2.5),
     ivory: std('#ece2c6', { roughness: 0.55 }),
+    wine: std('#7a2e3a', { roughness: 0.9 }),
     brick: std('#ffffff', { map: tex.brick, roughness: 0.85 }, 1.6),
     tileDark: std('#3f6b52', { roughness: 0.5 }),
     terrazzo: std('#ffffff', { map: tex.terrazzo, roughness: 0.5 }, 0.5),
@@ -670,6 +671,18 @@ export function buildWorld(scene, { menu = [] } = {}) {
           solidWall(k, 3.6, s.xe, Z_FRONT - WALL_T, Z_FRONT, 'granite');
           B.box('cream', 'wall', -3.6, 3.6, L + 2.7, L + LEVEL_H - 0.2, Z_FRONT - WALL_T, Z_FRONT);
         } else windowWall(k, s.xs, s.xe, Z_FRONT - WALL_T, Z_FRONT);
+      } else if (s.type === 'stair') {
+        // 계단실 앞벽: 계단이 벽에 붙음 (유리창 없이, 층계참 높이에 좁은 간유리 띠만)
+        const yb = k === 0 ? 0 : L - 0.2;
+        B.box('band', 'wall', s.xs, s.xe, yb, L + 0.9, Z_FRONT - WALL_T, Z_FRONT);
+        B.box('cream', 'wall', s.xs, s.xe, L + 0.9, L + 2.3, Z_FRONT - WALL_T, Z_FRONT);
+        B.box('cream', 'wall', s.xs, s.xs + 1.2, L + 2.3, L + 3.0, Z_FRONT - WALL_T, Z_FRONT);
+        B.box('cream', 'wall', s.xe - 1.2, s.xe, L + 2.3, L + 3.0, Z_FRONT - WALL_T, Z_FRONT);
+        B.box('glass', 'glass', s.xs + 1.2, s.xe - 1.2, L + 2.3, L + 3.0, Z_FRONT - WALL_T + 0.06, Z_FRONT - 0.06);
+        B.box('frame', 'deco', s.xs + 1.2, s.xe - 1.2, L + 2.3, L + 2.36, Z_FRONT - WALL_T - 0.02, Z_FRONT + 0.02);
+        B.box('frame', 'deco', s.xs + 1.2, s.xe - 1.2, L + 2.94, L + 3.0, Z_FRONT - WALL_T - 0.02, Z_FRONT + 0.02);
+        B.box('cream', 'wall', s.xs, s.xe, L + 3.0, L + LEVEL_H - 0.2, Z_FRONT - WALL_T, Z_FRONT);
+        block(k, s.xs, s.xe, Z_FRONT - WALL_T, Z_FRONT);
       } else windowWall(k, s.xs, s.xe, Z_FRONT - WALL_T, Z_FRONT);
       // 뒷벽 (복도 창문)
       if (k === 1 && s.xs < BRIDGE.minX && s.xe > BRIDGE.maxX) {
@@ -1350,6 +1363,43 @@ export function buildWorld(scene, { menu = [] } = {}) {
       B.box('glass', 'glass', xe - 0.57, xe - 0.55, L + 0.2, L + 1.75, -8.35, -6.45);
       for (let i = 0; i < 6; i++) B.geo('yellow', 'deco', new THREE.CylinderGeometry(0.05, 0.08, 0.25 + (i % 3) * 0.08, 10), xe - 0.33, L + 0.55 + Math.floor(i / 3) * 0.6, -8.1 + (i % 3) * 0.6);
       block(k, xe - 0.57, xe - 0.12, -8.4, -6.4);
+      // 2000년대 교장실 디테일: 책상 위 명패·전화기·결재판·탁상달력·서류 더미, 교기, 교훈 액자, 벽시계, 화분 큰 것, 탁자 위 다과 쟁반·물주전자, 난초, 책장 상장
+      B.box('tv', 'deco', xs + 1.3, xs + 1.5, L + 0.82, L + 0.92, -5.6, -5.3); // 전화기
+      B.box('white', 'deco', xs + 1.32, xs + 1.48, L + 0.92, L + 0.95, -5.55, -5.35);
+      B.box('blue', 'deco', xs + 1.7, xs + 2.0, L + 0.82, L + 0.85, -4.1, -3.7); // 결재판
+      B.box('white', 'deco', xs + 1.72, xs + 1.98, L + 0.85, L + 0.86, -4.05, -3.75);
+      B.box('white', 'deco', xs + 1.25, xs + 1.45, L + 0.82, L + 1.0, -3.6, -3.4); // 탁상달력
+      for (let i = 0; i < 4; i++) B.box(i % 2 ? 'cork' : 'white', 'deco', xs + 1.55, xs + 2.0, L + 0.82 + i * 0.04, L + 0.86 + i * 0.04, -5.1 + i * 0.01, -4.6); // 서류
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.04, 0.04, 0.12, 8), xs + 1.95, L + 0.88, -5.5); // 연필꽂이
+      // 교기 (초록 깃발, 태극기 옆)
+      B.geo('pole', 'deco', new THREE.CylinderGeometry(0.025, 0.025, 2.3, 8), xs + 0.5, L + 1.15, -2.0);
+      const sflag2 = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6), new THREE.MeshBasicMaterial({ map: textTex(180, 120, '#2f7d4a', '#f2c230', ['온라인중학교'], 26), side: THREE.DoubleSide }));
+      sflag2.rotation.y = Math.PI / 2;
+      sflag2.position.set(xs + 0.5, L + 1.95, -2.5);
+      scene.add(sflag2);
+      B.box('darkWood', 'deco', xs + 0.12, xs + 0.16, L + 2.3, L + 2.9, -5.4, -3.6); // 교훈 액자
+      const edu = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.5), new THREE.MeshBasicMaterial({ map: textTex(340, 100, '#f7f2e2', '#2b2b2b', ['교훈 · 성실 · 협동 · 창의'], 36, '#5a4030') }));
+      edu.rotation.y = Math.PI / 2;
+      edu.position.set(xs + 0.165, L + 2.6, -4.5);
+      scene.add(edu);
+      const pclk = new THREE.Mesh(wallClockGeo, wallClockMat);
+      pclk.rotation.y = Math.PI / 2;
+      pclk.position.set(xs + 0.13, L + 2.6, -7.5);
+      scene.add(pclk);
+      // 탁자 위 다과 쟁반·물주전자·찻잔, 난초 화분
+      B.box('steel', 'deco', xs + 5.5, xs + 6.5, L + 0.42, L + 0.44, -4.8, -4.2);
+      B.geo('steel', 'deco', new THREE.CylinderGeometry(0.08, 0.1, 0.18, 10), xs + 5.7, L + 0.53, -4.5);
+      for (let i = 0; i < 3; i++) B.geo('white', 'deco', new THREE.CylinderGeometry(0.04, 0.03, 0.06, 10), xs + 6.0 + i * 0.18, L + 0.47, -4.5);
+      B.box('cork', 'deco', xs + 5.1, xs + 5.4, L + 0.42, L + 0.47, -4.7, -4.3); // 다과 접시
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.12, 0.09, 0.2, 10), xs + 2.3, L + 0.92, -7.2); // 난초 화분 (책상 끝 사이드)
+      B.geo('shrub', 'deco', new THREE.IcosahedronGeometry(0.15, 0), xs + 2.3, L + 1.12, -7.2);
+      B.box('darkWood', 'deco', xs + 2.0, xs + 2.6, L, L + 0.82, -7.5, -6.9); // 사이드 장
+      block(k, xs + 2.0, xs + 2.6, -7.5, -6.9);
+      // 책장 위 상장·상패
+      for (let i = 0; i < 3; i++) B.box('white', 'deco', xs + 0.2, xs + 0.24, L + 2.2, L + 2.5, -2.4 + i * 0.5, -2.15 + i * 0.5);
+      B.box('gold', 'deco', xs + 0.3, xs + 0.42, L + 2.12, L + 2.45, -1.2, -1.0);
+      // 바닥 카펫 (소파 자리) + 창가 벨벳 커튼 느낌은 기존 커튼 사용
+      B.box('wine', 'deco', xs + 4.5, xs + 8.6, L + 0.005, L + 0.02, -6.8, -2.2);
     } else if (t === 'admin') {
       // 행정실: 민원 창구 카운터, 사무 책상 + 모니터, 서류 캐비닛, 금고
       B.box('lectern', 'deco', xs + 2.6, xs + 6.4, L, L + 1.05, -7.6, -7.2);
@@ -1450,6 +1500,52 @@ export function buildWorld(scene, { menu = [] } = {}) {
       block(k, xe - 0.6, xe - 0.15, -1.4, -0.9);
       plant(xe - 0.5, -8.3, L);
       block(k, xe - 0.75, xe - 0.25, -8.55, -8.05);
+      // 2000년대 교무실 디테일: 커피포트·커피믹스 탁자, 식기건조대·머그잔, 복사기, 심야전기 히터, 출석부 꽂이,
+      // 책상마다 교무수첩·서류 더미·전화기, 교무실 칠판 옆 주번 명단, 벽걸이 선풍기, 신문꽂이, 학교 종(핸드벨)
+      B.box('deskTop', 'deco', xe - 2.2, xe - 0.9, L + 0.72, L + 0.76, -8.4, -7.6); // 탁자
+      for (const lx of [xe - 2.1, xe - 1.0]) B.box('metal', 'deco', lx - 0.03, lx + 0.03, L, L + 0.72, -8.3, -7.7);
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.1, 0.11, 0.22, 10), xe - 2.0, L + 0.87, -8.0); // 커피포트
+      B.box('tv', 'deco', xe - 2.05, xe - 1.95, L + 0.98, L + 1.0, -8.05, -7.95);
+      B.box('yellow', 'deco', xe - 1.7, xe - 1.45, L + 0.76, L + 0.95, -8.2, -8.0); // 커피믹스 상자
+      B.box('red', 'deco', xe - 1.7, xe - 1.45, L + 0.76, L + 0.9, -7.95, -7.75); // 설탕통
+      B.box('steel', 'deco', xe - 1.4, xe - 0.95, L + 0.76, L + 0.78, -8.35, -7.65); // 식기건조대
+      for (let i = 0; i < 4; i++) B.geo(['white', 'blue', 'ginkgo', 'white'][i], 'deco', new THREE.CylinderGeometry(0.045, 0.04, 0.09, 10), xe - 1.32 + (i % 2) * 0.2, L + 0.83, -8.25 + Math.floor(i / 2) * 0.3);
+      block(k, xe - 2.25, xe - 0.85, -8.45, -7.55);
+      // 복사기 (문 옆)
+      B.box('cabinet', 'deco', xe - 1.0, xe - 0.2, L, L + 0.95, -6.6, -5.8);
+      B.box('white', 'deco', xe - 1.05, xe - 0.15, L + 0.95, L + 1.05, -6.65, -5.75);
+      B.box('tv', 'deco', xe - 0.9, xe - 0.3, L + 1.05, L + 1.1, -6.3, -6.1);
+      B.box('white', 'deco', xe - 1.3, xe - 1.0, L + 0.5, L + 0.53, -6.5, -5.9); // 용지 받침
+      block(k, xe - 1.35, xe - 0.15, -6.7, -5.7);
+      // 심야전기 히터 (크림색 큰 상자, 앞쪽 벽)
+      B.box('beige', 'deco', xs + 2.6, xs + 4.6, L, L + 0.75, -8.75, -8.35);
+      for (let i = 0; i < 12; i++) B.box('cabinet', 'deco', xs + 2.7 + i * 0.16, xs + 2.74 + i * 0.16, L + 0.1, L + 0.65, -8.35, -8.33);
+      block(k, xs + 2.55, xs + 4.65, -8.8, -8.3);
+      // 출석부 꽂이 (벽 선반에 반별로 꽂힌 초록 출석부)
+      B.box('shelf', 'deco', xs + 5.2, xs + 7.6, L + 1.5, L + 1.55, -8.75, -8.45);
+      B.box('shelf', 'deco', xs + 5.2, xs + 7.6, L + 1.85, L + 1.9, -8.75, -8.45);
+      for (let i = 0; i < 12; i++) B.box(i % 3 === 2 ? 'leaf1' : 'leaf2', 'deco', xs + 5.3 + i * 0.19, xs + 5.44 + i * 0.19, L + 1.55, L + 1.83, -8.7, -8.5);
+      const attLabel = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.18), new THREE.MeshBasicMaterial({ map: textTex(300, 54, '#ffffff', '#2b4a7a', ['출 석 부'], 32, '#2b4a7a') }));
+      attLabel.position.set(xs + 6.4, L + 2.05, -8.44);
+      scene.add(attLabel);
+      // 책상마다 전화기·교무수첩·서류 더미
+      for (const cx of [xs + 3.4, xs + 6.4]) for (const dz of [-6.4, -5.6, -3.4, -2.6]) {
+        B.box('tv', 'deco', cx + 0.42, cx + 0.6, L + 0.76, L + 0.83, dz - 0.3, dz - 0.1);
+        B.box('leaf2', 'deco', cx - 0.9 + 0.05, cx - 0.55, L + 0.76, L + 0.8, dz - 0.3, dz - 0.05);
+        for (let i = 0; i < 3; i++) B.box(i % 2 ? 'cork' : 'white', 'deco', cx - 0.9 + 0.05, cx - 0.55, L + 0.8 + i * 0.03, L + 0.83 + i * 0.03, dz + 0.05, dz + 0.3);
+      }
+      // 주번 명단 + 벽걸이 선풍기 + 신문꽂이 + 핸드벨
+      const duty2 = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.8), new THREE.MeshBasicMaterial({ map: textTex(120, 160, '#fff8dc', '#333333', ['이번 주 주번', '1-1 김○○', '2-3 이○○', '3-2 박○○', '', '교무 일정', '월 교직원회의'], 13, '#888888') }));
+      duty2.rotation.y = Math.PI / 2;
+      duty2.position.set(xs + 0.13, L + 1.8, -1.6);
+      scene.add(duty2);
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16).rotateX(Math.PI / 2), xe - 0.6, L + 2.6, Z_CORR + 0.25);
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.03, 0.03, 0.25, 6).rotateX(Math.PI / 2), xe - 0.6, L + 2.6, Z_CORR + 0.12);
+      B.box('lectern', 'deco', xs + 0.15, xs + 0.55, L, L + 0.9, -8.5, -7.9); // 신문꽂이
+      for (let i = 0; i < 4; i++) B.box('white', 'deco', xs + 0.2 + i * 0.08, xs + 0.24 + i * 0.08, L + 0.9, L + 1.3, -8.45, -7.95);
+      block(k, xs + 0.15, xs + 0.55, -8.5, -7.9);
+      B.geo('gold', 'deco', new THREE.ConeGeometry(0.07, 0.12, 12), xs + 3.4 + 0.7, L + 0.82, -6.4 - 0.1); // 핸드벨
+      B.geo('darkWood', 'deco', new THREE.CylinderGeometry(0.012, 0.012, 0.1, 6), xs + 3.4 + 0.7, L + 0.93, -6.4 - 0.1);
     } else if (t === 'nurse') {
       // 보건실: 침대 2개 + 커튼, 약장, 키·몸무게 재는 기계, 책상
       for (const bz of [-7.2, -4.9]) {
@@ -1472,6 +1568,52 @@ export function buildWorld(scene, { menu = [] } = {}) {
       officeDesk(k, L, xs + 1.0, xs + 2.0, -2.4, -1.2, xs + 1.5, -1.8, -1);
       officeChair(xs + 2.4, -1.8, L);
       staffSeats.push({ room: room.id, x: xs + 2.4, z: -1.8, seatY: L + 0.5, ry: -Math.PI / 2, role: 'nurse' });
+      // 2000년대 보건실 디테일: 약장 속 약병·붕대, 시력검사표·신체 포스터, 침대 옆 작은 탁자·물컵, 체온계·소독약·솜 쟁반, 하늘색 체중계,
+      // 세면대·비누·수건, 휴지통(빨간 뚜껑), 담요 접어둔 것, 보건일지, 안대 걸이, 작은 냉장고(얼음주머니), 긴 의자
+      for (let i = 0; i < 8; i++) B.box(['white', 'yellow', 'blue', 'red'][i % 4], 'deco', xs + 0.2 + (i % 4) * 0.1, xs + 0.26 + (i % 4) * 0.1, L + 1.0 + Math.floor(i / 4) * 0.4, L + 1.12 + Math.floor(i / 4) * 0.4, -7.2, -7.0); // 약병
+      for (let i = 0; i < 3; i++) B.geo('white', 'deco', new THREE.CylinderGeometry(0.05, 0.05, 0.06, 10).rotateZ(Math.PI / 2), xs + 0.37, L + 0.65, -6.3 + i * 0.15); // 붕대 롤
+      B.box('glass', 'glass', xs + 0.6, xs + 0.62, L + 0.5, L + 1.8, -7.45, -5.55); // 약장 유리문
+      const eye = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.9), new THREE.MeshBasicMaterial({ map: textTex(100, 180, '#ffffff', '#111111', ['시력검사표', 'ㄷ  ㅇ  ㄱ', 'ㅁ ㅇ ㅈ ㄷ', 'ㄱㅇㅁㅅㄷ', 'ㅅㅈㄷㅇㄱㅁ'], 13, '#888888') }));
+      eye.rotation.y = Math.PI / 2;
+      eye.position.set(xs + 0.13, L + 1.9, -3.0);
+      scene.add(eye);
+      const body = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.85), new THREE.MeshBasicMaterial({ map: textTex(120, 170, '#e8f4ff', '#2b4a7a', ['바른 자세', '🧍', '손 씻기', '6단계'], 16, '#2b4a7a') }));
+      body.position.set(xs + 4.5, L + 2.1, Z_CORR + 0.12);
+      scene.add(body);
+      B.geo('metal', 'deco', new THREE.CylinderGeometry(0.03, 0.03, 0.7, 8), xs + 0.55, L + 0.35, -4.15); // 키재기 눈금 막대 보강
+      // 침대 사이 작은 탁자 + 물컵·체온계 쟁반, 접은 담요, 안대
+      B.box('white', 'deco', xe - 1.9, xe - 1.3, L, L + 0.6, -6.3, -5.8);
+      B.box('steel', 'deco', xe - 1.85, xe - 1.35, L + 0.6, L + 0.62, -6.25, -5.85);
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.035, 0.03, 0.09, 10), xe - 1.75, L + 0.66, -6.1);
+      B.box('white', 'deco', xe - 1.55, xe - 1.4, L + 0.62, L + 0.635, -6.15, -6.0);
+      B.box('paleGreen', 'deco', xe - 0.65, xe - 0.25, L + 0.72, L + 0.84, -7.6, -7.3); // 접은 담요
+      block(k, xe - 1.95, xe - 1.25, -6.35, -5.75);
+      // 하늘색 체중계 + 세면대·비누·수건
+      B.box('blue', 'deco', xs + 1.0, xs + 1.4, L, L + 0.06, -4.3, -3.9);
+      B.box('white', 'deco', xs + 1.1, xs + 1.3, L + 0.06, L + 0.1, -4.25, -4.15);
+      B.box('white', 'deco', xs + 0.15, xs + 0.65, L + 0.7, L + 0.85, -1.3, -0.8); // 세면대
+      B.box('white', 'deco', xs + 0.15, xs + 0.3, L, L + 0.7, -1.15, -0.95);
+      B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.2, 6), xs + 0.25, L + 0.95, -1.05);
+      B.geo('yellow', 'deco', new THREE.SphereGeometry(0.035, 8, 6).scale(1, 0.6, 1.3), xs + 0.5, L + 0.87, -0.9);
+      B.box('ginkgo', 'deco', xs + 0.7, xs + 0.74, L + 1.0, L + 1.35, -1.25, -0.95); // 수건
+      block(k, xs + 0.1, xs + 0.7, -1.35, -0.75);
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.14, 0.12, 0.35, 10), xs + 3.0, L + 0.18, -1.0); // 휴지통
+      B.geo('red', 'deco', new THREE.CylinderGeometry(0.15, 0.15, 0.03, 10), xs + 3.0, L + 0.37, -1.0);
+      block(k, xs + 2.8, xs + 3.2, -1.2, -0.8);
+      // 소독약·솜 쟁반 + 보건일지 (책상 위)
+      B.box('steel', 'deco', xs + 1.1, xs + 1.5, L + 0.76, L + 0.78, -2.3, -2.0);
+      B.geo('white', 'deco', new THREE.CylinderGeometry(0.04, 0.04, 0.14, 8), xs + 1.2, L + 0.85, -2.15);
+      B.geo('white', 'deco', new THREE.SphereGeometry(0.04, 8, 6), xs + 1.4, L + 0.82, -2.15);
+      B.box('leaf2', 'deco', xs + 1.55, xs + 1.95, L + 0.76, L + 0.8, -1.7, -1.3);
+      // 작은 냉장고 (얼음주머니) + 긴 나무 의자 (기다리는 학생)
+      B.box('white', 'deco', xs + 3.4, xs + 4.0, L, L + 0.85, -8.6, -8.0);
+      B.box('steel', 'deco', xs + 3.95, xs + 4.0, L + 0.3, L + 0.7, -8.5, -8.48);
+      block(k, xs + 3.35, xs + 4.05, -8.65, -7.95);
+      B.box('chair', 'chair', xs + 5.0, xs + 7.4, L + 0.42, L + 0.47, -8.5, -8.1);
+      B.box('chair', 'chair', xs + 5.0, xs + 7.4, L + 0.47, L + 0.85, -8.55, -8.5);
+      for (const lx of [xs + 5.1, xs + 7.3]) B.box('metal', 'deco', lx - 0.03, lx + 0.03, L, L + 0.42, -8.45, -8.15);
+      block(k, xs + 4.95, xs + 7.45, -8.6, -8.05);
+      for (const cx of [xs + 5.5, xs + 6.3, xs + 7.0]) chairs.push({ x: cx, z: -8.3, seatY: L + 0.47, ry: Math.PI, level: k, room: room.id });
     } else if (t === 'broadcast') {
       // 방송실: 방송 콘솔, 마이크, 모니터, 테이프 장, ON AIR 등
       B.box('darkWood', 'deco', xs + 0.15, xs + 1.0, L, L + 0.8, -7.0, -2.0);
@@ -1738,6 +1880,16 @@ export function buildWorld(scene, { menu = [] } = {}) {
           B.geo('concrete', 'wall', g, (xa + xb) / 2, L + 1.8 + 0.9 - 0.36, (C.z0 + C.z1) / 2);
           // 양옆 계단 안쪽 난간 (가운데 계단과 사이)
           rail(sx * (C.sw1 + 0.03), C.z1, C.z0, L + 1.8, L + 3.6);
+          // 1층은 양옆 계단 밑이 뚫려 보이지 않게 계단 밑 창고 벽 (계단 경사 따라 높이가 올라감)
+          if (k === 0) {
+            for (let i = 0; i < 6; i++) {
+              const za = C.z1 + ((C.z0 - C.z1) * i) / 6;
+              const zb = C.z1 + ((C.z0 - C.z1) * (i + 1)) / 6;
+              const topY = L + 1.8 + (1.8 * i) / 6 - 0.3;
+              B.box('cream', 'wall', xa, xb, 0, topY, za, zb);
+            }
+            B.box('door', 'deco', sx > 0 ? xa + 0.02 : xb - 0.06, sx > 0 ? xa + 0.06 : xb - 0.02, L, L + 1.6, C.z0 - 1.6, C.z0 - 0.7); // 창고 문
+          }
         }
         // 가운데 계단 밑 비스듬한 판
         {
