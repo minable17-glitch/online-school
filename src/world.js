@@ -7,9 +7,12 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // ── 건물 치수 ─────────────────────────────────────────────
 export const LEVEL_H = 3.6; // 층 높이
 export const LEVELS = 3;
-export const levelY = (k) => 0.15 + k * LEVEL_H; // k층 바닥 높이 (0 = 1층)
+// 본관 1층 바닥은 땅보다 60cm 높음 (현관·옆문·뒷문에 돌계단)
+export const BASE = 0.6;
+export const levelY = (k) => BASE + k * LEVEL_H; // k층 바닥 높이 (0 = 1층)
+export const ANNEX_FLOOR = 0.15; // 강당동 1층(급식실) 바닥
 export const ROOF = LEVELS; // 옥상 = 4번째 층
-export const levelOfY = (y) => Math.max(0, Math.min(ROOF, Math.round((y - 0.15) / LEVEL_H)));
+export const levelOfY = (y) => Math.max(0, Math.min(ROOF, Math.round((y - BASE) / LEVEL_H)));
 
 const SLOT = 9; // 교실 가로
 const STAIR_W = 7; // 계단실 가로
@@ -85,6 +88,10 @@ export const CAFE = { ...ANNEX, level: 0 };
 export const GYM = { ...ANNEX, level: 1 };
 export const BRIDGE = { minX: 10, maxX: 13, minZ: ANNEX.maxZ, maxZ: Z_BACK };
 export const CAFE_DOOR = [20, 23];
+// 중앙현관 바깥 계단: 너비(반), 계단참 끝, 계단 끝
+export const ENTRY = { w: 5.2, landing: 1.4, depth: 3.0 };
+// 구령대: 단상(반폭 x, 앞뒤 z1~z2, 높이 top) + 양옆 계단(바깥 끝 stairX, sz1~sz2)
+export const PODIUM = { x: 6, z1: 11.4, z2: 14.8, top: 1.4, stairX: 8.8, sz1: 12.0, sz2: 13.8 };
 // 정문: 동쪽 담장, 건물 앞 마당과 바로 이어짐
 export const GATE = { z1: 4, z2: 13 };
 // 학교 밖 등굣길 (보도 · 차도 · 건너편 가게들)
@@ -365,6 +372,18 @@ export function buildWorld(scene, { menu = [] } = {}) {
     partition: std('#a9c2c8', { roughness: 0.9 }),
     pillarWood: std('#c8652e', { roughness: 0.6 }),
     bronze: std('#6f5a3c', { metalness: 0.55, roughness: 0.45 }),
+    gold: std('#d4a640', { metalness: 0.85, roughness: 0.3, emissive: '#3a2a08', emissiveIntensity: 0.25 }),
+    patina: std('#4f7a64', { metalness: 0.35, roughness: 0.55 }),
+    patinaDark: std('#36584a', { metalness: 0.35, roughness: 0.6 }),
+    pinkPaint: std('#e7a7a9', { roughness: 0.7 }),
+    blueDoor: std('#2f6fb3', { roughness: 0.5 }),
+    bluePaint: std('#3d7cc4', { roughness: 0.55 }),
+    orangePaint: std('#e8892e', { roughness: 0.55 }),
+    darkMetal: std('#4a4f55', { metalness: 0.5, roughness: 0.45 }),
+    blueMat: std('#2c5aa0', { roughness: 0.95 }),
+    signGreen: std('#2f7d4a', { roughness: 0.5 }),
+    slat: std('#d8d2c4', { roughness: 0.6 }),
+    downlight: std('#ffffff', { emissive: '#fff6dc', emissiveIntensity: 1.2 }),
     granite: std('#a7a39b', { roughness: 0.7 }),
     wisteria: std('#9a7bd1'),
     chairDark: std('#7a3b20', { roughness: 0.45 }),
@@ -570,9 +589,9 @@ export function buildWorld(scene, { menu = [] } = {}) {
       // 앞벽 (운동장 쪽)
       if (s.type === 'hall') {
         if (k === 0) {
-          solidWall(k, s.xs, -2.5, Z_FRONT - WALL_T, Z_FRONT);
-          solidWall(k, 2.5, s.xe, Z_FRONT - WALL_T, Z_FRONT);
-          B.box('cream', 'wall', -2.5, 2.5, L + 2.6, L + LEVEL_H - 0.2, Z_FRONT - WALL_T, Z_FRONT);
+          solidWall(k, s.xs, -3.6, Z_FRONT - WALL_T, Z_FRONT, 'granite');
+          solidWall(k, 3.6, s.xe, Z_FRONT - WALL_T, Z_FRONT, 'granite');
+          B.box('cream', 'wall', -3.6, 3.6, L + 2.7, L + LEVEL_H - 0.2, Z_FRONT - WALL_T, Z_FRONT);
         } else solidWall(k, s.xs, s.xe, Z_FRONT - WALL_T, Z_FRONT);
       } else windowWall(k, s.xs, s.xe, Z_FRONT - WALL_T, Z_FRONT);
       // 뒷벽 (복도 창문)
@@ -1301,11 +1320,6 @@ export function buildWorld(scene, { menu = [] } = {}) {
       B.box('locker', 'deco', x1, x2, L, L + 1.8, -8, -1);
       block(0, x1, x2, -8, -1);
     }
-    B.box('concrete', 'wall', -3.2, 3.2, 3.25, 3.45, 0, 3.2);
-    for (const px of [-2.9, 2.9]) {
-      B.geo('concrete', 'deco', new THREE.CylinderGeometry(0.15, 0.15, 3.25, 10), px, 1.62, 2.9);
-      block(0, px - 0.2, px + 0.2, 2.7, 3.1);
-    }
   }
   for (let k = 1; k < LEVELS; k++) {
     const L = levelY(k);
@@ -1468,18 +1482,114 @@ export function buildWorld(scene, { menu = [] } = {}) {
     for (let x = x1 + 1; x < x2; x += 2.2) B.geo('shrub', 'deco', new THREE.IcosahedronGeometry(0.6, 1), x, 0.7, 1.8);
     block(0, x1, x2, 1, 2.6);
   }
-  // 조회대
-  B.box('concrete', 'wall', -4, 4, 0, 1.2, 12, 15);
-  for (let i = 0; i < 3; i++) B.box('concrete', 'deco', -1.5, 1.5, 0, 0.4 * (i + 1), 15 + (2 - i) * 0.4, 15 + (3 - i) * 0.4);
-  B.box('metal', 'deco', -4, 4, 2.0, 2.05, 12.05, 12.1);
-  block(0, -4, 4, 12, 16.2);
-  // 국기 게양대 3개
-  [-8, -9.6, -11.2].forEach((x, i) => {
-    B.geo('pole', 'deco', new THREE.CylinderGeometry(0.05, 0.08, i === 1 ? 9 : 8, 8), x, i === 1 ? 4.5 : 4, 13.5);
-    block(0, x - 0.2, x + 0.2, 13.3, 13.7);
+  // ── 구령대: 분홍 단상 + 양옆 계단 + 스테인리스 난간 + 파란 문 + 아치 지붕(앞 주황 · 뒤 파란 기둥) ──
+  {
+    const { x: GX, z1, z2, top, stairX, sz1, sz2 } = PODIUM;
+    // 단상 몸통 + 윗면 + 테두리
+    B.box('pinkPaint', 'wall', -GX, GX, 0, top - 0.05, z1, z2);
+    B.box('granite', 'floor', -GX - 0.05, GX + 0.05, top - 0.05, top, z1 - 0.05, z2 + 0.05);
+    B.box('white', 'deco', -GX - 0.06, GX + 0.06, top - 0.18, top - 0.05, z2, z2 + 0.06);
+    B.box('band', 'deco', -GX - 0.02, GX + 0.02, 0, 0.15, z1 - 0.02, z2 + 0.02);
+    // 앞면: 파란 창고 문(두 짝) + 스피커 두 개
+    B.box('blueDoor', 'deco', -0.95, 0.95, 0.05, 1.15, z2, z2 + 0.04);
+    B.box('frame', 'deco', -0.02, 0.02, 0.05, 1.15, z2 + 0.04, z2 + 0.05);
+    for (const sx of [-1, 1]) {
+      B.box('steel', 'deco', sx * 0.12 - 0.02, sx * 0.12 + 0.02, 0.5, 0.7, z2 + 0.04, z2 + 0.07);
+      B.box('tv', 'deco', sx * 3.2 - 0.28, sx * 3.2 + 0.28, 0.45, 0.95, z2, z2 + 0.25);
+      B.box('metal', 'deco', sx * 3.2 - 0.2, sx * 3.2 + 0.2, 0.55, 0.85, z2 + 0.25, z2 + 0.27);
+    }
+    // 위쪽 앞 난간 (스테인리스 기둥 + 가로대 2줄)
+    const rz = z2 - 0.12;
+    for (let x = -GX + 0.1; x <= GX - 0.09; x += 1) B.geo('steel', 'deco', new THREE.CylinderGeometry(0.03, 0.03, 1, 8), x, top + 0.5, rz);
+    for (const h of [0.5, 1.0]) {
+      const r = new THREE.CylinderGeometry(0.035, 0.035, GX * 2 - 0.2, 8);
+      r.rotateZ(Math.PI / 2);
+      B.geo('steel', 'deco', r, 0, top + h, rz);
+    }
+    // 뒤쪽 낮은 벽 + 현수막
+    B.box('pinkPaint', 'wall', -GX, GX, top, top + 0.9, z1, z1 + 0.15);
+    const banner = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 0.9), new THREE.MeshBasicMaterial({ map: textTex(760, 90, '#fdfaf0', '#1f4f8f', ['꿈과 희망이 자라는 온라인중학교'], 54, '#c9302c') }));
+    banner.position.set(0, top + 2.6, z1 + 0.32);
+    scene.add(banner);
+    B.box('steel', 'deco', -3.85, 3.85, top + 3.06, top + 3.1, z1 + 0.28, z1 + 0.31);
+    for (const sx of [-1, 1]) B.geo('steel', 'deco', new THREE.CylinderGeometry(0.035, 0.035, 3.1, 8), sx * 3.85, top + 1.55, z1 + 0.3);
+    // 막힘: 단상 가장자리 (계단 자리는 열림)
+    block(0, -GX - 0.2, GX + 0.2, z2 - 0.3, z2 + 0.2);
+    block(0, -GX - 0.2, GX + 0.2, z1 - 0.2, z1 + 0.35);
+    for (const sx of [-1, 1]) {
+      const xa = Math.min(sx * (GX - 0.25), sx * (GX + 0.25));
+      const xb = Math.max(sx * (GX - 0.25), sx * (GX + 0.25));
+      block(0, xa, xb, z1, sz1);
+      block(0, xa, xb, sz2, z2);
+    }
+    // 양옆 계단 (5단) + 비스듬한 스테인리스 손잡이
+    const run = stairX - GX;
+    const n = 5;
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < n; i++) {
+        const a = sx * (GX + (i * run) / n);
+        const b = sx * (GX + ((i + 1) * run) / n);
+        const h = top - (i * top) / n;
+        B.box('granite', 'floor', Math.min(a, b), Math.max(a, b), 0, h, sz1, sz2);
+        B.box('orangePaint', 'deco', Math.min(a, b), Math.max(a, b), h, h + 0.012, sz1 + 0.02, sz2 - 0.02);
+      }
+      const len = Math.hypot(run, top);
+      const ang = Math.atan2(top, run);
+      for (const rz2 of [sz1 + 0.06, sz2 - 0.06]) {
+        const r = new THREE.CylinderGeometry(0.035, 0.035, len, 8);
+        r.rotateZ(Math.PI / 2 + (sx > 0 ? -ang : ang));
+        B.geo('steel', 'deco', r, sx * (GX + run / 2), top / 2 + 0.95, rz2);
+        for (const px of [GX + 0.05, stairX - 0.1]) {
+          const ph = px < GX + 0.1 ? top : 0;
+          B.geo('steel', 'deco', new THREE.CylinderGeometry(0.03, 0.03, 0.95, 8), sx * px, ph + 0.47, rz2);
+        }
+        block(0, Math.min(sx * GX, sx * stairX), Math.max(sx * GX, sx * stairX), rz2 - 0.15, rz2 + 0.15);
+      }
+    }
+    // 기둥: 앞 주황 · 뒤 파랑, 그 위로 둥근 아치 지붕 (어두운 철판 + 테두리)
+    const R = 7.4;
+    const post = top + 3.4;
+    const cz1 = z1 - 0.4;
+    const cz2 = z2 + 0.5;
+    for (const sx of [-1, 1]) {
+      for (const [cz, mat] of [[cz1, 'bluePaint'], [cz2, 'orangePaint']]) {
+        B.geo(mat, 'deco', new THREE.CylinderGeometry(0.2, 0.2, post, 14), sx * (R - 0.15), post / 2, cz);
+        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.3, 0.3, 0.2, 14), sx * (R - 0.15), 0.1, cz);
+        block(0, sx * (R - 0.15) - 0.3, sx * (R - 0.15) + 0.3, cz - 0.3, cz + 0.3);
+      }
+      B.box('darkMetal', 'deco', sx * (R - 0.15) - 0.12, sx * (R - 0.15) + 0.12, post - 0.25, post, cz1, cz2);
+    }
+    const g = new THREE.CylinderGeometry(R, R, cz2 - cz1 + 0.6, 32, 1, true, Math.PI / 2, Math.PI);
+    g.rotateX(Math.PI / 2);
+    g.scale(1, 0.32, 1);
+    const roof = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: '#5a6168', metalness: 0.5, roughness: 0.5, side: THREE.DoubleSide }));
+    roof.position.set(0, post, (cz1 + cz2) / 2);
+    roof.castShadow = true;
+    scene.add(roof);
+    const zf = cz2 + 0.3;
+    for (const [zz, rr] of [[zf, 0.09], [cz1 - 0.3, 0.06]]) {
+      const t = new THREE.TorusGeometry(R, rr, 8, 40, Math.PI);
+      t.scale(1, 0.32, 1);
+      B.geo('steel', 'deco', t, 0, post, zz);
+    }
+    // 앞쪽 아치 아래 둥근 고리 장식 + 가운데 학교 마크
+    for (let i = 1; i < 12; i++) {
+      const a = (i / 12) * Math.PI;
+      const ring = new THREE.TorusGeometry(0.22, 0.035, 6, 16);
+      B.geo('steel', 'deco', ring, Math.cos(a) * (R - 0.45), post + Math.sin(a) * (R - 0.45) * 0.32 - 0.08, zf);
+    }
+    const mark = new THREE.Mesh(new THREE.CircleGeometry(0.55, 28), new THREE.MeshBasicMaterial({ map: textTex(128, 128, '#2f7d4a', '#ffffff', ['온'], 80, '#f2c230') }));
+    mark.position.set(0, post + R * 0.32 - 0.85, zf + 0.06);
+    scene.add(mark);
+  }
+  // 국기 게양대 3개 (구령대 서쪽)
+  [-10.5, -12, -13.5].forEach((x, i) => {
+    B.geo('pole', 'deco', new THREE.CylinderGeometry(0.05, 0.08, i === 1 ? 9 : 8, 8), x, i === 1 ? 4.5 : 4, 13.2);
+    B.geo('granite', 'deco', new THREE.CylinderGeometry(0.3, 0.35, 0.3, 12), x, 0.15, 13.2);
+    block(0, x - 0.35, x + 0.35, 12.85, 13.55);
   });
   const flagBig = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1), new THREE.MeshStandardMaterial({ map: taegukTex, side: THREE.DoubleSide }));
-  flagBig.position.set(-8.8, 8.3, 13.5);
+  flagBig.position.set(-11.2, 8.3, 13.2);
   scene.add(flagBig);
   animated.push((t) => {
     flagBig.rotation.y = Math.sin(t * 1.3) * 0.15;
@@ -1711,7 +1821,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
       if (a2 > cur) piece(cur, a2);
     };
     // 바닥: 1층 인조석, 2층(강당) 나무 바닥판, 지붕
-    B.box('terrazzo', 'floor', A.minX, A.maxX, 0, levelY(0), A.minZ, A.maxZ);
+    B.box('terrazzo', 'floor', A.minX, A.maxX, 0, ANNEX_FLOOR, A.minZ, A.maxZ);
     B.box('floorWood', 'floor', A.minX, A.maxX, L1 - 0.2, L1, A.minZ, A.maxZ);
     // 1층 벽
     run(0, 0, L1 - 0.2, A.minX, A.maxX, A.maxZ - T, A.maxZ, [CAFE_DOOR], 1.0, 2.6);
@@ -1918,7 +2028,7 @@ export function buildWorld(scene, { menu = [] } = {}) {
     pave(-W, W, zMid - W, Z_BACK);
     archRoof('z', zMid + W, Z_BACK, 0);
     tactile(-0.15, 0.15, zMid, Z_BACK);
-    for (const x of [-W, W]) woodPost(x, Z_BACK - 0.5);
+    for (const x of [-W, W]) woodPost(x, Z_BACK - 1.5);
     pave(-W, cafeX + W, zMid - W, zMid + W);
     archRoof('x', -W, cafeX + W, zMid);
     tactile(0, cafeX, zMid - 0.15, zMid + 0.15);
@@ -1951,81 +2061,357 @@ export function buildWorld(scene, { menu = [] } = {}) {
     block(0, x1 - 0.3, x2 + 0.3, z1 - 0.3, z2 + 0.3);
   }
 
-  // ── 중앙현관: 유리문(양옆 고정창) + 문턱 돌계단 + 발판 ──
+  // ── 중앙현관: 깊은 차양(루버 천장 + 매입등 + 표어 띠) · 화강암 계단(주황 미끄럼방지) · 유리문 · 파란 매트 · 학교 표지판 · X배너 ──
   {
-    for (const [x1, x2] of [[-2.5, -1.5], [1.5, 2.5]]) {
-      B.box('glass', 'glass', x1, x2, 0.15, 2.5, -0.15, -0.05);
-      B.box('steel', 'deco', x1, x1 + 0.06, 0.15, 2.55, -0.17, -0.03);
-      B.box('steel', 'deco', x2 - 0.06, x2, 0.15, 2.55, -0.17, -0.03);
+    const L = levelY(0);
+    const { w: EW, landing, depth } = ENTRY;
+    // 유리 출입문: 고정창 3칸 + 열린 문 두 곳
+    for (const [x1, x2] of [[-3.6, -2.4], [-0.6, 0.6], [2.4, 3.6]]) {
+      B.box('glass', 'glass', x1, x2, L, L + 2.6, -0.15, -0.05);
       block(0, x1, x2, -0.2, 0);
     }
-    B.box('steel', 'deco', -2.5, 2.5, 2.5, 2.6, -0.17, -0.03);
-    B.box('glass', 'glass', -1.5, -0.6, 0.15, 2.5, -0.5, -0.42); // 안쪽으로 열린 문짝
-    B.box('glass', 'glass', 0.6, 1.5, 0.15, 2.5, -0.5, -0.42);
-    B.box('granite', 'deco', -3.4, 3.4, 0, 0.08, 0, 1.0);
-    B.box('leaf1', 'deco', -1.3, 1.3, 0.15, 0.17, -1.6, -0.5); // 초록 발판
-    const entSign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map: textTex(320, 80, '#f7f2e2', '#2b2b2b', ['중앙현관'], 46, '#7a5532') }));
-    entSign.position.set(0, 2.9, 0.02);
+    for (const x of [-3.6, -2.4, -0.6, 0.6, 2.4, 3.6]) B.box('steel', 'deco', x - 0.05, x + 0.05, L, L + 2.7, -0.18, -0.02);
+    B.box('steel', 'deco', -3.6, 3.6, L + 2.6, L + 2.7, -0.18, -0.02);
+    B.box('steel', 'deco', -3.6, 3.6, L, L + 0.08, -0.18, -0.02);
+    for (const [a, sgn] of [[-2.4, 1], [-0.6, -1], [0.6, 1], [2.4, -1]]) {
+      // 안쪽으로 활짝 열린 문짝 + 손잡이
+      const x = a + sgn * 0.06;
+      B.box('glass', 'glass', x - 0.03, x + 0.03, L + 0.05, L + 2.55, -1.0, -0.12);
+      B.box('steel', 'deco', x - 0.04, x + 0.04, L + 0.05, L + 0.15, -1.0, -0.12);
+      B.box('steel', 'deco', x - 0.05, x + 0.05, L + 0.9, L + 1.1, -0.95, -0.9);
+    }
+    B.box('granite', 'wall', -3.6, 3.6, L + 2.7, L + 3.3, 0, 0.03);
+    const entSign = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.42), new THREE.MeshBasicMaterial({ map: textTex(360, 84, '#f7f2e2', '#2b2b2b', ['중앙현관'], 50, '#7a5532') }));
+    entSign.position.set(0, L + 3.0, 0.05);
     scene.add(entSign);
+    B.box('leaf1', 'deco', -1.3, 1.3, L, L + 0.02, -1.6, -0.5); // 안쪽 초록 발판
+
+    // 계단참 + 4단 돌계단 (각 단 끝에 주황 미끄럼방지 줄)
+    B.box('granite', 'floor', -EW, EW, 0, BASE, Z_FRONT, landing);
+    B.box('orangePaint', 'deco', -EW + 0.1, EW - 0.1, BASE, BASE + 0.012, landing - 0.08, landing - 0.02);
+    const run = (depth - landing) / 4;
+    for (let i = 0; i < 3; i++) {
+      const h = BASE * (1 - (i + 1) / 4);
+      const za = landing + i * run;
+      B.box('granite', 'floor', -EW, EW, 0, h, za, za + run);
+      B.box('orangePaint', 'deco', -EW + 0.1, EW - 0.1, h, h + 0.012, za + run - 0.08, za + run - 0.02);
+    }
+    // 계단 양옆 화강암 볼(측벽)
+    for (const sx of [-1, 1]) {
+      B.box('granite', 'wall', sx * EW - 0.2, sx * EW + 0.2, 0, BASE + 0.15, Z_FRONT, depth - run);
+      block(0, sx * EW - 0.25, sx * EW + 0.25, Z_FRONT, depth - run);
+    }
+    B.box('blueMat', 'deco', -2.6, 2.6, BASE, BASE + 0.015, 0.15, 1.15);
+    // 계단 앞 초록·회색 보도
+    const greenPave = canvasTex(128, 128, (g) => {
+      g.fillStyle = '#7d8a7f';
+      g.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 4; i++)
+        for (let j = 0; j < 4; j++) {
+          g.fillStyle = (i + j) % 3 === 0 ? '#5f8f6a' : (i * j) % 2 ? '#a3a7a2' : '#8f948f';
+          g.fillRect(i * 32 + 1, j * 32 + 1, 30, 30);
+        }
+    });
+    pave(-EW - 2, EW + 2, depth, depth + 4, greenPave, 0.022, 1.6);
+
+    // 차양: 두꺼운 콘크리트 판 + 앞 테두리 표어 + 아래 루버(나무색 살) + 매입등
+    const cy = L + 3.4;
+    const cz = depth + 1.4;
+    B.box('concrete', 'deco', -EW - 0.3, EW + 0.3, cy + 0.12, cy + 0.6, Z_FRONT, cz);
+    B.box('slat', 'deco', -EW - 0.3, EW + 0.3, cy, cy + 0.12, cz - 0.15, cz);
+    for (let x = -EW - 0.15; x <= EW + 0.15; x += 0.22) B.box('slat', 'deco', x - 0.06, x + 0.06, cy + 0.04, cy + 0.12, Z_FRONT + 0.1, cz - 0.15);
+    for (const lx of [-3.4, 0, 3.4]) for (const lz of [1.2, 3.2]) B.geo('downlight', 'deco', new THREE.CylinderGeometry(0.12, 0.12, 0.03, 12), lx, cy + 0.02, lz);
+    const slogan = new THREE.Mesh(
+      new THREE.PlaneGeometry(EW * 2 + 0.4, 0.42),
+      new THREE.MeshBasicMaterial({ map: textTex(1100, 84, '#e9e7e1', '#1d3f7a', ['꿈과 끼를 키우는 · 바른 인성 · 미래 주도 인재'], 50) }),
+    );
+    slogan.position.set(0, cy + 0.36, cz + 0.01);
+    scene.add(slogan);
+    // 차양 받치는 화강암 기둥
+    for (const sx of [-1, 1]) {
+      B.box('granite', 'wall', sx * (EW + 0.05) - 0.3, sx * (EW + 0.05) + 0.3, 0, cy + 0.12, cz - 0.75, cz - 0.15);
+      block(0, sx * (EW + 0.05) - 0.35, sx * (EW + 0.05) + 0.35, cz - 0.8, cz - 0.1);
+    }
+
+    // 가운데 초록 학교 표지판 (계단참 위)
+    B.geo('steel', 'deco', new THREE.CylinderGeometry(0.25, 0.3, 0.06, 16), 0, BASE + 0.03, 0.85);
+    B.geo('steel', 'deco', new THREE.CylinderGeometry(0.035, 0.035, 1.3, 8), 0, BASE + 0.65, 0.85);
+    B.box('signGreen', 'deco', -0.42, 0.42, BASE + 1.0, BASE + 1.75, 0.82, 0.88);
+    const logo = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.7), new THREE.MeshBasicMaterial({ map: textTex(160, 144, '#2f7d4a', '#ffffff', ['온라인', '중학교'], 40, '#f2c230') }));
+    logo.position.set(0, BASE + 1.375, 0.885);
+    scene.add(logo);
+    block(0, -0.35, 0.35, 0.6, 1.1);
+
+    // X배너 두 개 (계단참 양 끝)
+    const xBanner = (x, lines, bg) => {
+      for (const s of [-1, 1]) {
+        const leg = new THREE.CylinderGeometry(0.015, 0.015, 1.9, 6);
+        leg.rotateX(s * 0.18);
+        B.geo('metal', 'deco', leg, x, BASE + 0.95, 0.7);
+        const leg2 = new THREE.CylinderGeometry(0.015, 0.015, 1.9, 6);
+        leg2.rotateZ(s * 0.18);
+        B.geo('metal', 'deco', leg2, x, BASE + 0.95, 0.68);
+      }
+      const p = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.7), new THREE.MeshBasicMaterial({ map: textTex(120, 340, bg, '#ffffff', lines, 30), side: THREE.DoubleSide }));
+      p.position.set(x, BASE + 1.05, 0.72);
+      scene.add(p);
+      block(0, x - 0.35, x + 0.35, 0.4, 1.0);
+    };
+    xBanner(-EW + 0.6, ['학교폭력', '없는', '행복한', '학교'], '#c9302c');
+    xBanner(EW - 0.6, ['신입생', '여러분', '입학을', '축하해요'], '#1f6fb5');
   }
 
-  // ── 옆 출입문(계단실): 철문 틀 + 작은 차양 + 바깥 보도블록 ──
+  // ── 뒷문 돌계단 (복도 → 지붕 통로) ──
+  for (let i = 0; i < 3; i++) {
+    const za = Z_BACK - 1.2 + i * 0.4;
+    const h = (BASE * (i + 0.5)) / 3;
+    B.box('granite', 'floor', -2.2, 2.2, 0, h, za, za + 0.4);
+    B.box('orangePaint', 'deco', -2.1, 2.1, h, h + 0.012, za + 0.02, za + 0.08);
+  }
+
+  // ── 옆 출입문(계단실): 철문 틀 + 작은 차양 + 돌계단 3단 + 바깥 보도블록 ──
   for (const side of [-1, 1]) {
     const wx = side * BX;
     const out = side; // 바깥 방향
-    B.box('steel', 'deco', wx - 0.12, wx + 0.12, 0, 2.3, -11.5, -11.38);
-    B.box('steel', 'deco', wx - 0.12, wx + 0.12, 0, 2.3, -9.62, -9.5);
-    B.box('steel', 'deco', wx - 0.12, wx + 0.12, 2.22, 2.32, -11.5, -9.5);
-    B.box('door', 'deco', wx + out * 0.12, wx + out * 0.16, 0, 2.2, -9.6, -8.7); // 바깥으로 열린 철문
-    B.box('concrete', 'wall', Math.min(wx, wx + out * 1.6), Math.max(wx, wx + out * 1.6), 2.7, 2.85, -12.2, -8.8);
-    B.box('granite', 'deco', Math.min(wx, wx + out * 1.2), Math.max(wx, wx + out * 1.2), 0, 0.06, -11.8, -9.2);
-    flatBlocks(side > 0 ? wx : wx - 5, side > 0 ? wx + 5 : wx, -14, -7);
-  }
-
-  // ── 동상: 세종대왕(앉은 모습) · 이순신(칼 든 모습), 화강암 받침대 + 둘레 화단 ──
-  const statueBase = (x, z, name) => {
-    B.box('band', 'deco', x - 1.6, x + 1.6, 0, 0.3, z - 1.6, z + 1.6);
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      B.geo('shrub', 'deco', new THREE.IcosahedronGeometry(0.32, 1), x + Math.sin(a) * 1.25, 0.55, z + Math.cos(a) * 1.25);
+    B.box('steel', 'deco', wx - 0.12, wx + 0.12, BASE, BASE + 2.3, -11.5, -11.38);
+    B.box('steel', 'deco', wx - 0.12, wx + 0.12, BASE, BASE + 2.3, -9.62, -9.5);
+    B.box('steel', 'deco', wx - 0.12, wx + 0.12, BASE + 2.22, BASE + 2.32, -11.5, -9.5);
+    B.box('door', 'deco', wx - 0.6 * out - 0.02, wx - 0.6 * out + 0.02, BASE, BASE + 2.2, -9.6, -9.0); // 안쪽으로 열린 철문
+    B.box('concrete', 'deco', Math.min(wx, wx + out * 1.6), Math.max(wx, wx + out * 1.6), BASE + 2.6, BASE + 2.75, -12.2, -8.8);
+    for (let i = 0; i < 3; i++) {
+      const a = wx + out * i * 0.4;
+      const b = wx + out * (i + 1) * 0.4;
+      const h = BASE * (1 - (i + 0.5) / 3);
+      B.box('granite', 'floor', Math.min(a, b), Math.max(a, b), 0, h, -11.6, -9.4);
+      B.box('orangePaint', 'deco', Math.min(a, b), Math.max(a, b), h, h + 0.012, -11.5, -9.5);
     }
-    B.box('granite', 'wall', x - 0.75, x + 0.75, 0.3, 1.7, z - 0.75, z + 0.75);
-    B.box('granite', 'deco', x - 0.85, x + 0.85, 1.7, 1.8, z - 0.85, z + 0.85);
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.35), new THREE.MeshBasicMaterial({ map: textTex(330, 100, '#3b3226', '#e8d8a8', [name], 52) }));
-    plaque.position.set(x, 1.0, z + 0.76);
-    scene.add(plaque);
-    block(0, x - 1.6, x + 1.6, z - 1.6, z + 1.6);
+    flatBlocks(side > 0 ? wx : wx - 5, side > 0 ? wx + 5 : wx, -14, -7);
+    // 계단 옆은 막아서 모서리로 뛰어내리지 않게
+    const sa = Math.min(wx, wx + out * 1.2);
+    const sb = Math.max(wx, wx + out * 1.2);
+    block(0, sa, sb, -11.9, -11.6);
+    block(0, sa, sb, -9.4, -9.1);
+  }
+  for (const sx of [-1, 1]) block(0, Math.min(sx * 2.2, sx * 2.5), Math.max(sx * 2.2, sx * 2.5), Z_BACK - 1.2, Z_BACK);
+
+  // ── 동상: 세종대왕(금빛, 앉은 모습) · 이순신(청동, 칼 짚고 선 모습) ──
+  // 몸은 기본 도형을 조합해서 만듦 (로컬 좌표 → 크기 S 배로 키워서 받침대 위에 올림)
+  const statue = (cx, baseY, cz, S) => {
+    const put = (mat, g, lx, ly, lz) => {
+      g.translate(lx, ly, lz);
+      g.scale(S, S, S);
+      B.geo(mat, 'deco', g, cx, baseY, cz);
+    };
+    const up = new THREE.Vector3(0, 1, 0);
+    return {
+      put,
+      box: (mat, x1, x2, y1, y2, z1, z2) => put(mat, new THREE.BoxGeometry(x2 - x1, y2 - y1, z2 - z1), (x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2),
+      ball: (mat, r, x, y, z, sx = 1, sy = 1, sz = 1) => {
+        const g = new THREE.SphereGeometry(r, 16, 12);
+        g.scale(sx, sy, sz);
+        put(mat, g, x, y, z);
+      },
+      // a → b 로 이어지는 원기둥(팔·다리·소매)
+      limb: (mat, a, b, r1, r2 = r1) => {
+        const A = new THREE.Vector3(...a);
+        const Bv = new THREE.Vector3(...b);
+        const d = Bv.clone().sub(A);
+        const g = new THREE.CylinderGeometry(r2, r1, d.length(), 12);
+        g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.normalize()));
+        const m = A.add(Bv).multiplyScalar(0.5);
+        put(mat, g, m.x, m.y, m.z);
+      },
+      lathe: (mat, pts, y, z = 0, sz = 1) => {
+        const g = new THREE.LatheGeometry(pts.map(([r, h]) => new THREE.Vector2(r, h)), 20);
+        g.scale(1, 1, sz);
+        put(mat, g, 0, y, z);
+      },
+    };
+  };
+  const statueBed = (x, z) => {
+    B.box('band', 'deco', x - 1.9, x + 1.9, 0, 0.3, z - 1.9, z + 1.9);
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      B.geo('shrub', 'deco', new THREE.IcosahedronGeometry(0.32, 1), x + Math.sin(a) * 1.55, 0.55, z + Math.cos(a) * 1.55);
+    }
+    block(0, x - 1.9, x + 1.9, z - 1.9, z + 1.9);
+  };
+  const carve = (x, y, z, w, h, lines, size, bg = '#8e8a82', fg = '#2b2722') => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: textTex(Math.round(w * 300), Math.round(h * 300), bg, fg, lines, size) }));
+    m.position.set(x, y, z);
+    scene.add(m);
   };
   {
-    // 세종대왕 (서쪽)
+    // 세종대왕: 계단식 화강암 받침 → 장식 의자 → 곤룡포(가슴 흉배·옥대) → 오른손 들고 왼손엔 펼친 책 → 익선관
     const x = -13;
     const z = 6.5;
-    statueBase(x, z, '세종대왕');
-    const y = 1.8;
-    B.box('bronze', 'deco', x - 0.55, x + 0.55, y, y + 0.55, z - 0.5, z + 0.3); // 의자
-    B.box('bronze', 'deco', x - 0.55, x + 0.55, y + 0.55, y + 1.3, z - 0.55, z - 0.4); // 등받이
-    B.geo('bronze', 'deco', new THREE.CylinderGeometry(0.32, 0.48, 0.9, 12), x, y + 0.95, z - 0.1); // 곤룡포
-    B.box('bronze', 'deco', x - 0.4, x + 0.4, y + 0.45, y + 0.6, z - 0.1, z + 0.45); // 무릎
-    B.geo('bronze', 'deco', new THREE.SphereGeometry(0.22, 14, 12), x, y + 1.6, z - 0.08);
-    B.box('bronze', 'deco', x - 0.2, x + 0.2, y + 1.72, y + 1.95, z - 0.25, z + 0.08); // 익선관
-    for (const sx of [-1, 1]) B.box('bronze', 'deco', x + sx * 0.2, x + sx * 0.32, y + 1.82, y + 1.95, z - 0.18, z - 0.12);
-    B.box('bronze', 'deco', x - 0.18, x + 0.18, y + 0.62, y + 0.66, z + 0.15, z + 0.42); // 펼친 책
+    statueBed(x, z);
+    B.box('granite', 'deco', x - 1.2, x + 1.2, 0.3, 0.55, z - 1.2, z + 1.2);
+    B.box('granite', 'deco', x - 1.0, x + 1.0, 0.55, 0.8, z - 1.0, z + 1.0);
+    B.box('granite', 'wall', x - 0.82, x + 0.82, 0.8, 1.95, z - 0.82, z + 0.82);
+    B.box('granite', 'deco', x - 0.95, x + 0.95, 1.95, 2.1, z - 0.95, z + 0.95);
+    carve(x, 1.38, z + 0.83, 1.2, 0.5, ['세종대왕'], 92);
+    const s = statue(x, 2.1, z, 1.25);
+    const G = 'gold';
+    // 발판 + 의자(용상)
+    s.box(G, -0.62, 0.62, 0, 0.1, -0.5, 0.78);
+    s.box(G, -0.64, 0.64, 0.1, 0.55, -0.5, 0.32);
+    s.box(G, -0.6, 0.6, 0.12, 0.5, 0.32, 0.36); // 앞 장식판
+    for (const sx of [-1, 1]) {
+      s.box(G, sx * 0.64 - 0.07, sx * 0.64 + 0.07, 0.55, 0.85, -0.5, 0.3); // 팔걸이
+      s.limb(G, [sx * 0.64, 0.85, 0.3], [sx * 0.64, 0.85, 0.42], 0.08); // 팔걸이 끝 말림
+      s.limb(G, [sx * 0.58, 0.55, -0.5], [sx * 0.58, 2.05, -0.5], 0.055); // 등받이 기둥
+      s.ball(G, 0.08, sx * 0.58, 2.1, -0.5); // 기둥 꼭지
+    }
+    s.box(G, -0.58, 0.58, 0.55, 1.9, -0.56, -0.44); // 등받이
+    s.box(G, -0.5, 0.5, 0.8, 1.7, -0.44, -0.42); // 등받이 안쪽 장식판
+    {
+      const crest = new THREE.TorusGeometry(0.5, 0.05, 8, 20, Math.PI);
+      crest.scale(1, 0.45, 1);
+      s.put(G, crest, 0, 1.9, -0.5);
+    }
+    // 다리(곤룡포 자락이 무릎을 덮고 발까지)
+    s.box(G, -0.38, 0.38, 0.5, 0.72, -0.3, 0.4); // 허벅지
+    {
+      const robe = new THREE.CylinderGeometry(0.4, 0.46, 0.5, 16, 1, false, -Math.PI / 2, Math.PI);
+      s.put(G, robe, 0, 0.35, 0.3);
+    }
+    for (const sx of [-1, 1]) s.ball(G, 0.08, sx * 0.14, 0.15, 0.6, 1, 0.6, 1.6); // 신발 코
+    // 몸통 (곤룡포, 앞뒤로 약간 납작)
+    s.lathe(G, [[0.01, 0], [0.42, 0], [0.4, 0.2], [0.34, 0.5], [0.3, 0.72], [0.18, 0.82], [0.01, 0.84]], 0.65, -0.1, 0.72);
+    {
+      // 가슴 둥근 흉배(용무늬) — 금빛 테두리 안에 어두운 원판
+      const disc = new THREE.CylinderGeometry(0.13, 0.13, 0.03, 20);
+      disc.rotateX(Math.PI / 2 - 0.12);
+      s.put('bronze', disc, 0, 1.13, 0.15);
+      const rim = new THREE.TorusGeometry(0.13, 0.015, 6, 20);
+      rim.rotateX(-0.12);
+      s.put(G, rim, 0, 1.13, 0.165);
+      s.ball(G, 0.05, 0, 1.13, 0.17, 1, 1, 0.4);
+    }
+    {
+      const belt = new THREE.TorusGeometry(0.38, 0.035, 8, 24);
+      belt.rotateX(Math.PI / 2);
+      belt.scale(1, 1, 0.74);
+      s.put(G, belt, 0, 0.86, -0.1);
+    }
+    for (const sx of [-1, 1]) s.ball(G, 0.15, sx * 0.3, 1.36, -0.1, 1, 0.8, 1); // 어깨
+    // 왼팔: 무릎 위 책을 받침 (넓은 소매)
+    s.limb(G, [-0.34, 1.36, -0.1], [-0.42, 1.0, 0.05], 0.1, 0.11);
+    s.limb(G, [-0.42, 1.0, 0.05], [-0.26, 0.86, 0.32], 0.12, 0.17);
+    s.ball(G, 0.06, -0.22, 0.82, 0.38);
+    // 펼친 책
+    for (const sx of [-1, 1]) {
+      const page = new THREE.BoxGeometry(0.17, 0.02, 0.24);
+      page.rotateZ(sx * 0.18);
+      s.put(G, page, -0.12 + sx * 0.085, 0.8 + 0.015, 0.3);
+    }
+    // 오른팔: 앞으로 들어 손바닥을 펴 보임
+    s.limb(G, [0.34, 1.36, -0.1], [0.46, 1.04, 0.1], 0.1, 0.11);
+    s.limb(G, [0.46, 1.04, 0.1], [0.42, 1.36, 0.36], 0.11, 0.14);
+    s.ball(G, 0.13, 0.47, 1.12, 0.22, 0.6, 1.3, 1); // 늘어진 소매 자락
+    s.box(G, 0.36, 0.48, 1.38, 1.56, 0.36, 0.41); // 펼친 손바닥
+    for (let f = 0; f < 4; f++) s.box(G, 0.365 + f * 0.03, 0.385 + f * 0.03, 1.56, 1.63, 0.37, 0.4);
+    // 목 · 머리 · 수염
+    s.limb(G, [0, 1.46, -0.1], [0, 1.58, -0.08], 0.075);
+    s.ball(G, 0.16, 0, 1.7, -0.07, 0.95, 1.08, 1);
+    s.box(G, -0.02, 0.02, 1.66, 1.74, 0.07, 0.11); // 코
+    s.box(G, -0.07, 0.07, 1.62, 1.635, 0.07, 0.1); // 콧수염
+    {
+      const beard = new THREE.ConeGeometry(0.055, 0.16, 10);
+      beard.rotateX(Math.PI);
+      s.put(G, beard, 0, 1.51, 0.05);
+    }
+    for (const sx of [-1, 1]) s.ball(G, 0.035, sx * 0.16, 1.7, -0.08, 0.6, 1, 1); // 귀
+    // 익선관: 둥근 모자 + 뒤로 솟은 턱 + 위로 선 날개 두 개
+    s.limb(G, [0, 1.76, -0.08], [0, 1.88, -0.08], 0.165, 0.16);
+    s.ball(G, 0.15, 0, 1.9, -0.04, 1, 0.55, 0.9);
+    s.ball(G, 0.13, 0, 1.97, -0.15, 1, 0.9, 0.8);
+    for (const sx of [-1, 1]) {
+      const wing = new THREE.BoxGeometry(0.1, 0.15, 0.02);
+      wing.rotateZ(-sx * 0.25);
+      s.put(G, wing, sx * 0.1, 2.1, -0.2);
+    }
   }
   {
-    // 이순신 (동쪽)
+    // 이순신: 2단 받침(명판) → 장화 → 긴 갑옷 자락 → 비늘 갑옷 몸통 · 견갑 → 오른손 허리, 왼손 장검 → 투구(목가리개 · 술)
     const x = 13;
     const z = 6.5;
-    statueBase(x, z, '충무공 이순신');
-    const y = 1.8;
-    for (const sx of [-1, 1]) B.box('bronze', 'deco', x + sx * 0.15 - 0.1, x + sx * 0.15 + 0.1, y, y + 0.8, z - 0.1, z + 0.12);
-    B.geo('bronze', 'deco', new THREE.CylinderGeometry(0.28, 0.42, 0.95, 12), x, y + 1.15, z); // 갑옷
-    B.box('bronze', 'deco', x - 0.45, x + 0.45, y + 1.5, y + 1.62, z - 0.15, z + 0.15); // 어깨
-    B.geo('bronze', 'deco', new THREE.SphereGeometry(0.2, 14, 12), x, y + 1.85, z);
-    B.geo('bronze', 'deco', new THREE.ConeGeometry(0.24, 0.35, 12), x, y + 2.12, z); // 투구
-    B.geo('bronze', 'deco', new THREE.CylinderGeometry(0.3, 0.3, 0.04, 14), x, y + 1.96, z);
-    B.box('bronze', 'deco', x - 0.03, x + 0.03, y + 0.2, y + 1.55, z + 0.32, z + 0.38); // 장검
-    B.box('bronze', 'deco', x - 0.12, x + 0.12, y + 1.25, y + 1.3, z + 0.3, z + 0.4);
-    B.geo('bronze', 'deco', new THREE.CylinderGeometry(0.4, 0.55, 0.05, 14), x, y + 0.02, z);
+    statueBed(x, z);
+    B.box('granite', 'deco', x - 1.15, x + 1.15, 0.3, 0.7, z - 1.15, z + 1.15);
+    B.box('granite', 'wall', x - 0.85, x + 0.85, 0.7, 2.2, z - 0.85, z + 0.85);
+    B.box('granite', 'deco', x - 0.95, x + 0.95, 2.2, 2.35, z - 0.95, z + 0.95);
+    carve(x, 1.5, z + 0.86, 1.4, 0.6, ['충무공', '이순신 장군'], 66);
+    const s = statue(x, 2.35, z, 1.3);
+    const P = 'patina';
+    const D = 'patinaDark';
+    s.box(D, -0.42, 0.42, 0, 0.06, -0.3, 0.32); // 발 받침
+    for (const sx of [-1, 1]) {
+      s.limb(P, [sx * 0.13, 0.06, 0.02], [sx * 0.14, 0.62, 0], 0.085, 0.09); // 장화
+      s.box(P, sx * 0.13 - 0.08, sx * 0.13 + 0.08, 0.06, 0.14, 0.0, 0.2); // 발끝
+    }
+    // 갑옷 자락 (무릎 아래까지 퍼지는 치마 모양)
+    s.lathe(P, [[0.2, 0.0], [0.37, 0.0], [0.34, 0.25], [0.3, 0.55], [0.28, 0.65], [0.2, 0.66]], 0.45, 0, 0.82);
+    {
+      const slit = new THREE.BoxGeometry(0.05, 0.6, 0.06);
+      s.put(D, slit, 0, 0.75, 0.28); // 앞트임
+    }
+    // 허리띠 + 몸통 갑옷 + 가슴 원형 호심경
+    {
+      const belt = new THREE.TorusGeometry(0.29, 0.04, 8, 24);
+      belt.rotateX(Math.PI / 2);
+      belt.scale(1, 1, 0.82);
+      s.put(D, belt, 0, 1.1, 0);
+    }
+    s.lathe(P, [[0.01, 0], [0.29, 0], [0.31, 0.25], [0.33, 0.45], [0.25, 0.58], [0.01, 0.6]], 1.1, 0, 0.75);
+    {
+      const disc = new THREE.CylinderGeometry(0.09, 0.09, 0.03, 16);
+      disc.rotateX(Math.PI / 2);
+      s.put(D, disc, 0, 1.45, 0.24);
+    }
+    for (let r = 0; r < 4; r++) s.box(D, -0.26, 0.26, 1.17 + r * 0.1, 1.185 + r * 0.1, 0.19, 0.23); // 비늘 줄무늬
+    // 견갑 (어깨 덮개)
+    for (const sx of [-1, 1]) {
+      s.ball(P, 0.17, sx * 0.32, 1.6, 0, 1, 0.7, 1.05);
+      s.box(D, sx * 0.32 - 0.16, sx * 0.32 + 0.16, 1.47, 1.5, -0.15, 0.15);
+    }
+    // 오른팔: 주먹 쥐고 허리에
+    s.limb(P, [0.36, 1.58, 0], [0.48, 1.3, 0.02], 0.09, 0.1);
+    s.limb(P, [0.48, 1.3, 0.02], [0.3, 1.14, 0.12], 0.09, 0.08);
+    s.ball(P, 0.065, 0.28, 1.13, 0.13);
+    // 왼팔: 몸 앞에 세운 장검 손잡이를 꽉 잡음
+    s.limb(P, [-0.36, 1.58, 0], [-0.4, 1.3, 0.12], 0.09, 0.1);
+    s.limb(P, [-0.4, 1.3, 0.12], [-0.2, 1.32, 0.34], 0.09, 0.08);
+    s.ball(P, 0.07, -0.18, 1.33, 0.37);
+    // 장검: 칼끝은 발 옆 땅, 칼집은 길고 곧게
+    s.limb(D, [-0.24, 0.06, 0.42], [-0.18, 1.22, 0.38], 0.035, 0.03); // 칼집
+    s.box(D, -0.27, -0.1, 1.22, 1.25, 0.34, 0.42); // 코등이
+    s.limb(P, [-0.18, 1.25, 0.38], [-0.18, 1.5, 0.37], 0.025); // 손잡이
+    s.ball(D, 0.035, -0.18, 1.52, 0.37);
+    // 목 · 얼굴 · 수염
+    s.limb(P, [0, 1.68, 0], [0, 1.78, 0], 0.075);
+    s.ball(P, 0.15, 0, 1.88, 0.01, 0.95, 1.08, 1);
+    s.box(P, -0.02, 0.02, 1.85, 1.92, 0.14, 0.17); // 코
+    s.box(D, -0.08, 0.08, 1.8, 1.815, 0.13, 0.16); // 콧수염
+    {
+      const beard = new THREE.ConeGeometry(0.05, 0.13, 10);
+      beard.rotateX(Math.PI);
+      s.put(D, beard, 0, 1.72, 0.1);
+    }
+    // 투구: 둥근 챙 + 높은 원뿔 + 꼭대기 술 + 목가리개(뒤·옆)
+    s.limb(P, [0, 1.94, 0], [0, 2.02, 0], 0.18, 0.17);
+    {
+      const brim = new THREE.CylinderGeometry(0.22, 0.24, 0.03, 18);
+      s.put(D, brim, 0, 1.97, 0.02);
+      const cone = new THREE.ConeGeometry(0.15, 0.32, 16);
+      s.put(P, cone, 0, 2.18, 0);
+      const flap = new THREE.CylinderGeometry(0.2, 0.25, 0.26, 16, 1, true, 0.5, Math.PI * 2 - 1.0);
+      s.put(D, flap, 0, 1.84, -0.01);
+    }
+    s.limb(D, [0, 2.32, 0], [0, 2.42, 0], 0.015);
+    s.ball(D, 0.06, 0, 2.46, 0, 1, 1.4, 1); // 투구 술
+    // 등 뒤로 늘어진 전포 자락
+    s.box(D, -0.26, 0.26, 0.55, 1.55, -0.3, -0.25);
   }
 
   // ── 등나무 쉼터 (나무 퍼걸러 + 보라색 꽃송이 + 벤치) ──
@@ -2305,9 +2691,25 @@ export function buildWorld(scene, { menu = [] } = {}) {
   function heightAt(x, z, curY = 0) {
     const nearest = (cands) => cands.reduce((b, c) => (Math.abs(c - curY) < Math.abs(b - curY) ? c : b));
     // 강당동: 1층 급식실 / 2층 강당
-    if (x > ANNEX.minX && x < ANNEX.maxX && z > ANNEX.minZ && z < ANNEX.maxZ) return nearest([levelY(0), levelY(1)]);
+    if (x > ANNEX.minX && x < ANNEX.maxX && z > ANNEX.minZ && z < ANNEX.maxZ) return nearest([ANNEX_FLOOR, levelY(1)]);
     // 구름다리 위 / 그 아래 땅
     if (x > BRIDGE.minX && x < BRIDGE.maxX && z > BRIDGE.minZ && z < BRIDGE.maxZ) return nearest([0, levelY(1)]);
+    // 현관 앞 돌계단 (계단참 → 4단 내려감)
+    if (Math.abs(x) < ENTRY.w && z > Z_FRONT && z < ENTRY.depth) {
+      if (z < ENTRY.landing) return BASE;
+      const step = Math.min(3, Math.floor(((z - ENTRY.landing) / (ENTRY.depth - ENTRY.landing)) * 4));
+      return BASE * (1 - (step + 1) / 4);
+    }
+    // 뒷문 계단 (복도 → 지붕 통로)
+    if (Math.abs(x) < 2.2 && z < Z_BACK && z > Z_BACK - 1.2) return BASE * Math.max(0, (z - (Z_BACK - 1.2)) / 1.2);
+    // 옆문 계단 (계단실 → 바깥)
+    if (Math.abs(x) > BX && Math.abs(x) < BX + 1.2 && z > -11.6 && z < -9.4) return BASE * Math.max(0, 1 - (Math.abs(x) - BX) / 1.2);
+    // 구령대 (단상 위 + 양옆 계단)
+    if (Math.abs(x) < PODIUM.x && z > PODIUM.z1 && z < PODIUM.z2) return PODIUM.top;
+    if (Math.abs(x) >= PODIUM.x && Math.abs(x) < PODIUM.stairX && z > PODIUM.sz1 && z < PODIUM.sz2) {
+      const i = Math.min(4, Math.floor(((Math.abs(x) - PODIUM.x) / (PODIUM.stairX - PODIUM.x)) * 5));
+      return PODIUM.top - (i * PODIUM.top) / 5;
+    }
     if (x < -BX || x > BX || z < Z_BACK || z > Z_FRONT) return 0;
     const st = STAIRS.find((s) => x >= s.xs && x <= s.xe);
     const cands = [];

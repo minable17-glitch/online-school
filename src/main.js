@@ -143,7 +143,7 @@ scene.add(npc.root);
 // ── 급식실 조리사님 (위생모 + 앞치마) ──
 const cooks = world.cookSpots.map(({ x, z }, i) => {
   const c = new Avatar({ id: `cafe-cook-${i}`, name: '조리사님', color: '#f2f2ee', occlude: true, look: { outfit: 'navy', hair: 'bun', hairColor: 'dark', acc: 'hairnet' } });
-  c.pos.set(x, levelY(0), z);
+  c.pos.set(x, 0.15, z);
   c.root.rotation.y = 0;
   scene.add(c.root);
   return c;
@@ -525,7 +525,7 @@ function handleTap(cx, cy) {
   // 계단을 눌렀나? → 한 층 올라가거나 내려가기
   if (hit.object.userData.role === 'stair') {
     const st = STAIRS.find((t) => hit.point.x >= t.xs - 0.5 && hit.point.x <= t.xe + 0.5) || STAIRS[0];
-    const flightBase = Math.max(0, Math.min(ROOF - 1, Math.floor((hit.point.y - 0.15) / 3.6)));
+    const flightBase = Math.max(0, Math.min(ROOF - 1, Math.floor((hit.point.y - levelY(0)) / 3.6)));
     const myLevel = levelOfY(me.pos.y);
     const target = myLevel <= flightBase ? flightBase + 1 : flightBase;
     return goTo({ x: st.xA, y: levelY(target), z: st.zEntry }, target);
