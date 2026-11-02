@@ -1,21 +1,23 @@
-// 게임 속 짧은 시간표: 1시간에 하루 (매시 정각에 1교시 시작, 끝나면 다시 1교시부터)
-// 수업 6분 · 쉬는 시간 2분 · 점심 8분
+// 게임 속 짧은 시간표: 1시간에 하루 (매시 정각에 등교 시작, 방과 후가 끝나면 다음 날 등교)
+// 등교 3분 · 수업 5분 · 쉬는 시간 2분 · 점심 6분 · 방과 후 6분
 // 실제 시계를 기준으로 계산하므로 모든 친구 화면에서 같은 교시가 됨 (서버 필요 없음)
 
 const PLAN = [
-  ['1교시', 'class', 6],
+  ['등교 시간', 'morning', 3],
+  ['1교시', 'class', 5],
   ['쉬는 시간', 'break', 2],
-  ['2교시', 'class', 6],
+  ['2교시', 'class', 5],
   ['쉬는 시간', 'break', 2],
-  ['3교시', 'class', 6],
+  ['3교시', 'class', 5],
   ['쉬는 시간', 'break', 2],
-  ['4교시', 'class', 6],
-  ['점심시간', 'lunch', 8],
-  ['5교시', 'class', 6],
+  ['4교시', 'class', 5],
+  ['점심시간', 'lunch', 6],
+  ['5교시', 'class', 5],
   ['쉬는 시간', 'break', 2],
-  ['6교시', 'class', 6],
+  ['6교시', 'class', 5],
   ['쉬는 시간', 'break', 2],
-  ['7교시', 'class', 6],
+  ['7교시', 'class', 5],
+  ['방과 후', 'after', 6],
 ];
 
 const CYCLE_SEC = PLAN.reduce((s, p) => s + p[2] * 60, 0); // 3600초 = 1시간
@@ -52,6 +54,8 @@ export function schoolNow(ms = nowMs()) {
   const key = `${day}-${i}`;
   if (cur.kind === 'class') return { key, kind: 'class', icon: '📚', text: cur.name, sub: `수업 중 · ${mmss(left)} 남음` };
   if (cur.kind === 'lunch') return { key, kind: 'lunch', icon: '🍱', text: '점심시간', sub: `${mmss(left)} 남음` };
+  if (cur.kind === 'morning') return { key, kind: 'morning', icon: '🌅', text: '등교 시간', sub: `1교시까지 ${mmss(left)}` };
+  if (cur.kind === 'after') return { key, kind: 'after', icon: '🌇', text: '방과 후', sub: `${mmss(left)} 남음` };
   const next = TIMETABLE[i + 1];
   return { key, kind: 'break', icon: '☕', text: '쉬는 시간', sub: `${next.name}까지 ${mmss(left)}` };
 }

@@ -403,7 +403,7 @@ export class Avatar {
   }
 
   play(type) {
-    const dur = { hand: 4, bow: 1.8, clap: 2.2 }[type] || 2;
+    const dur = { hand: 4, bow: 1.8, clap: 2.2, handsup: 1e9 }[type] || 2;
     this.action = { type, t: 0, dur };
     if (type === 'hand') this.showEmoji('✋', dur);
     if (type === 'clap') this.showEmoji('👏', dur);
@@ -477,6 +477,11 @@ export class Avatar {
         armRx = -Math.PI * 0.95 * k + armRx * (1 - k);
         armRz = 0.12 + 0.15 * k;
         if (a.t > 0.3 && a.t < a.dur - 0.3) armRz += Math.sin(a.t * 6) * 0.08;
+      } else if (a.type === 'handsup') {
+        // 벌서기: 두 팔 번쩍
+        armRx = armLx = -Math.PI * 0.95 * k;
+        armLz = -0.12 - 0.1 * k;
+        armRz = 0.12 + 0.1 * k;
       } else if (a.type === 'bow') {
         const p = Math.sin(Math.min(1, a.t / a.dur) * Math.PI);
         bodyX = 0.75 * p;

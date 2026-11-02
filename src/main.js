@@ -6,9 +6,10 @@
 //            ?room=우리학교&teacher=1  → 선생님 이름표로 입장
 import * as THREE from 'three';
 import './school.css';
-import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX, BRIDGE, HALL_NAMES } from './world.js';
+import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX, BRIDGE, HALL_NAMES, OUT, GATE } from './world.js';
 import { createSoccer } from './soccer.js';
 import { createTeachers, SUBJECTS } from './teachers.js';
+import { createEvents, TREATS } from './events.js';
 import { Avatar, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } from './avatar.js';
 import { schoolNow, todayMenu, setTestTime } from './schedule.js';
 import { createNavigator } from './pathfind.js';
@@ -94,8 +95,9 @@ if (startClass) {
   me.pos.set(startClass.xs + 2.3, L, -3.15 + (Math.random() - 0.5) * 0.3);
   me.root.rotation.y = -Math.PI / 2;
 } else {
-  me.pos.set((Math.random() - 0.5) * 6, 0, 22 + Math.random() * 2);
-  me.root.rotation.y = Math.PI;
+  // 학교 밖 등굣길에서 시작 → 교문으로 걸어 들어오기
+  me.pos.set(OUT.curb - 3 + Math.random() * 1.5, 0, 24 + Math.random() * 3);
+  me.root.rotation.y = Math.atan2(OUT.wall - me.pos.x, (GATE.z1 + GATE.z2) / 2 - me.pos.z);
 }
 scene.add(me.root);
 
@@ -129,6 +131,8 @@ function onBall(s) {
 
 // ── NPC 선생님들 ──
 const teachers = createTeachers({ scene, world });
+// ── 등교 시간 교문지도 · 방과 후 노점 ──
+const events = createEvents({ scene });
 
 // ── 매점 아주머니 ──
 const npc = new Avatar({ id: 'store-npc', name: '매점 아주머니', color: '#c0603f', occlude: true });
@@ -256,7 +260,7 @@ function walkTo(avatar, dest, chairIndex = null) {
 let inStore = false;
 
 // ── 카메라 (내 아바타 뒤를 따라감, 끌어서 회전) ──
-const cam = { yaw: 0, pitch: 0.42, dist: 7.5, cur: 7.5, focus: new THREE.Vector3() };
+const cam = { yaw: startClass ? 0 : me.root.rotation.y + Math.PI, pitch: 0.42, dist: 7.5, cur: 7.5, focus: new THREE.Vector3() };
 if (startClass) cam.yaw = Math.PI / 2;
 const camRay = new THREE.Raycaster();
 function updateCamera(dt) {
@@ -388,6 +392,12 @@ function onAction(a) {
   } else if (a.type === 'shoot') {
     const hi = a.hoop | 0;
     if (HOOPS[hi]) launchShot(o.avatar, hi, !!a.ok);
+  } else if (a.type === 'treat') {
+    const tr = TREATS[a.i | 0];
+    if (tr) {
+      o.avatar.showEmoji(tr.emoji, 20);
+      o.avatar.say(tr.say);
+    }
   } else if (a.type === 'meal') {
     o.avatar.showEmoji('🍱', 30);
     o.avatar.say('잘 먹겠습니다!');
@@ -569,6 +579,28 @@ function sitAt(idx) {
     announce();
   } else hint('그 자리로 갈 수 없어요');
 }
+
+// ── 방과 후 노점 버튼 ──
+const vendorBtn = document.getElementById('vendorBtn');
+let vendorNear = null;
+function updateVendorBtn() {
+  vendorNear = events.nearVendor(me);
+  vendorBtn.classList.toggle('hidden', !vendorNear);
+  if (vendorNear) vendorBtn.textContent = vendorNear.spec.button;
+}
+let lastTreat = 0;
+vendorBtn.addEventListener('click', () => {
+  unlockAudio();
+  if (!vendorNear || performance.now() - lastTreat < 1500) return;
+  lastTreat = performance.now();
+  let i = vendorNear.spec.treat;
+  if (i === 2 && Math.random() < 0.45) i = 3; // 뽑기는 깨질 때도 있음
+  me.showEmoji(TREATS[i].emoji, 20);
+  me.say(TREATS[i].say);
+  ambience?.ding();
+  vendorNear.avatar.say(i === 3 ? '아이고, 아깝다~ 다시 해 봐!' : '고맙다~ 또 와!');
+  net.send('act', { type: 'treat', i });
+});
 
 // ── 의자 근처: 앉기 / 일어나기 버튼 ──
 const sitBtn = document.getElementById('sitBtn');
@@ -1037,7 +1069,7 @@ function start() {
     preferInstance: params.get('instance'),
   });
   renderRoomLabel();
-  setTimeout(() => hint('가까운 빈 바닥을 눌러주세요', 2600), 400);
+  setTimeout(() => hint(startClass ? '가까운 빈 바닥을 눌러주세요' : '🏫 교문으로 들어가 볼까요?', 2800), 400);
 
   ambience = createAmbience();
   ambience.setMuted(muted);
@@ -1074,7 +1106,7 @@ function updateWhere() {
       ? '구름다리'
       : null;
   const hallRoom = inBuilding && !onRoof && Math.abs(me.pos.x) < 4.5 && me.pos.z > Z_CORR ? HALL_NAMES[levelOfY(me.pos.y)] : null;
-  const w = r ? r.name : onRoof ? '옥상' : hallRoom ? hallRoom : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.z < Z_BACK ? '뒷마당' : '운동장');
+  const w = r ? r.name : onRoof ? '옥상' : hallRoom ? hallRoom : inBuilding ? `${levelOfY(me.pos.y) + 1}층` : shop ? '매점' : annex || (me.pos.x > OUT.wall ? '등굣길' : me.pos.z < Z_BACK ? '뒷마당' : '운동장');
   if (w !== lastWhere) {
     if (r && lastWhere && !TEACHING.has(r.type)) {
       hint(r.name, 1800);
@@ -1136,6 +1168,7 @@ function frame() {
   for (const c of cooks) c.update(dt, () => 0);
   updateShots(dt);
   stepSounds();
+  events.update(dt, me, camera.position);
   teachers.update(dt, me, roomAt(me.pos.x, me.pos.z, me.pos.y)?.id, camera.position);
   soccer.update(dt, me, !!me.target);
   world.update(clock.elapsedTime);
@@ -1153,6 +1186,8 @@ function frame() {
     updateStairBar();
     updateSitBtn();
     teachers.sync(me);
+    events.sync(schoolNow());
+    updateVendorBtn();
     scorePill.classList.toggle('hidden', lastWhere !== '운동장');
     ambience?.setMix(soundMix());
   }

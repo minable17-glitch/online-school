@@ -87,6 +87,8 @@ export const BRIDGE = { minX: 10, maxX: 13, minZ: ANNEX.maxZ, maxZ: Z_BACK };
 export const CAFE_DOOR = [20, 23];
 // 정문: 동쪽 담장, 건물 앞 마당과 바로 이어짐
 export const GATE = { z1: 4, z2: 13 };
+// 학교 밖 등굣길 (보도 · 차도 · 건너편 가게들)
+export const OUT = { wall: 69.6, curb: 82, road2: 90, shops: 96, maxX: 107 };
 export const HOOPS = [
   { x: ANNEX.minX + 1.65, y: levelY(1) + 3.05, z: -26.4 },
   { x: ANNEX.maxX - 1.65, y: levelY(1) + 3.05, z: -26.4 },
@@ -95,7 +97,7 @@ export const PITCH = { minX: -46.8, maxX: 46.8, minZ: 15.3, maxZ: 66.7, goalX: 4
 
 // 층별 길찾기 범위
 export const NAV_BOUNDS = [
-  { minX: -68.5, maxX: 68.5, minZ: -45.5, maxZ: 72.5 }, // 1층 + 바깥(담장 안)
+  { minX: -68.5, maxX: OUT.maxX, minZ: -45.5, maxZ: 72.5 }, // 1층 + 운동장 + 학교 밖 등굣길
   { minX: -BX, maxX: BX, minZ: ANNEX.minZ - 0.5, maxZ: Z_FRONT }, // 2층 + 구름다리 + 강당
   { minX: -BX, maxX: BX, minZ: Z_BACK, maxZ: Z_FRONT },
   { minX: -BX, maxX: BX, minZ: Z_BACK, maxZ: Z_FRONT }, // 옥상
@@ -2143,21 +2145,158 @@ export function buildWorld(scene, { menu = [] } = {}) {
   wallSeg(69.1, 69.5, -46, GATE.z1);
   wallSeg(69.1, 69.5, GATE.z2, 73.4);
   wallSeg(-69.5, 69.5, -46.4, -46);
-  // 정문: 벽돌 기둥 + 학교 이름 현판 + 옆으로 밀어 열린 철제 미닫이 교문 + 바닥 레일
-  for (const gz of [GATE.z1 - 0.5, GATE.z2 + 0.5]) B.box('band', 'deco', 68.7, 70.0, 0, 2.9, gz - 0.55, gz + 0.55);
-  for (const gz of [GATE.z1 - 0.5, GATE.z2 + 0.5]) B.box('granite', 'deco', 68.6, 70.1, 2.9, 3.05, gz - 0.65, gz + 0.65);
-  const gateName = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.85, 2.2),
-    new THREE.MeshBasicMaterial({ map: textTex(128, 330, '#f0ead8', '#2b2b2b', ['온', '라', '인', '중', '학', '교'], 44), side: THREE.DoubleSide }),
-  );
-  gateName.rotation.y = -Math.PI / 2;
-  gateName.position.set(68.68, 1.55, GATE.z1 - 0.5);
-  scene.add(gateName);
-  B.box('metal', 'deco', 69.2, 69.4, 0, 0.04, GATE.z1, GATE.z2);
-  B.box('fence', 'deco', 69.25, 69.35, 0.1, 1.9, GATE.z2 + 1.1, GATE.z2 + 5.5);
-  B.box('fence', 'deco', 69.22, 69.38, 1.75, 1.85, GATE.z2 + 1.1, GATE.z2 + 5.5);
-  for (let z = GATE.z2 + 1.2; z < GATE.z2 + 5.5; z += 0.18) B.box('fence', 'deco', 69.27, 69.33, 0.1, 1.85, z - 0.02, z + 0.02);
-  for (const gz of [GATE.z2 + 1.4, GATE.z2 + 5.2]) B.geo('tv', 'deco', new THREE.CylinderGeometry(0.08, 0.08, 0.06, 12).rotateZ(Math.PI / 2), 69.3, 0.08, gz);
+  // ── 교문 (실제 교문처럼) ──
+  // 벽돌 큰 기둥 + 화강암 머릿돌, 바퀴 달린 철제 미닫이 교문(반쯤 열림) + 바닥 레일, 기둥에 학교 이름
+  {
+    const gx = 69.3;
+    for (const gz of [GATE.z1 - 0.7, GATE.z2 + 0.7]) {
+      B.box('band', 'wall', gx - 0.7, gx + 0.7, 0, 3.2, gz - 0.7, gz + 0.7);
+      B.box('granite', 'deco', gx - 0.85, gx + 0.85, 3.2, 3.45, gz - 0.85, gz + 0.85);
+      B.box('granite', 'deco', gx - 0.6, gx + 0.6, 3.45, 3.6, gz - 0.6, gz + 0.6);
+      B.geo('lamp', 'deco', new THREE.SphereGeometry(0.22, 14, 10), gx, 3.85, gz);
+      block(0, gx - 0.7, gx + 0.7, gz - 0.7, gz + 0.7);
+    }
+    for (const face of [1, -1]) {
+      const nm = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.9, 2.3),
+        new THREE.MeshBasicMaterial({ map: textTex(128, 330, '#e8e2d2', '#1f1f1f', ['온', '라', '인', '중', '학', '교'], 46, '#8a8578') }),
+      );
+      nm.rotation.y = face > 0 ? Math.PI / 2 : -Math.PI / 2;
+      nm.position.set(gx + face * 0.71, 1.7, GATE.z1 - 0.7);
+      scene.add(nm);
+    }
+    // 바닥 레일
+    B.box('metal', 'deco', gx - 0.12, gx - 0.08, 0, 0.03, GATE.z1, GATE.z2 + 6);
+    B.box('metal', 'deco', gx + 0.08, gx + 0.12, 0, 0.03, GATE.z1, GATE.z2 + 6);
+    // 철제 미닫이 교문: 담장 쪽으로 밀어 열어 둔 상태 (일부는 열린 문 안쪽에 걸쳐 있음)
+    const gz1 = GATE.z2 - 1.6;
+    const gz2 = GATE.z2 + 5.6;
+    B.box('fence', 'deco', gx - 0.06, gx + 0.06, 0.18, 0.28, gz1, gz2);
+    B.box('fence', 'deco', gx - 0.06, gx + 0.06, 1.95, 2.05, gz1, gz2);
+    B.box('fence', 'deco', gx - 0.06, gx + 0.06, 1.0, 1.06, gz1, gz2);
+    for (let z = gz1; z <= gz2 + 0.01; z += 0.16) B.box('fence', 'deco', gx - 0.025, gx + 0.025, 0.18, 2.05, z - 0.02, z + 0.02);
+    for (let z = gz1 + 0.2; z < gz2; z += 1.2) {
+      const tip = new THREE.ConeGeometry(0.05, 0.16, 6);
+      B.geo('yellow', 'deco', tip, gx, 2.13, z);
+    }
+    for (const wz of [gz1 + 0.4, gz2 - 0.4]) B.geo('tv', 'deco', new THREE.CylinderGeometry(0.09, 0.09, 0.07, 12).rotateZ(Math.PI / 2), gx, 0.1, wz);
+    block(0, gx - 0.1, gx + 0.1, gz1, gz2);
+    // 교명석 (학교 이름을 새긴 큰 돌, 교문 밖)
+    const stone = new THREE.IcosahedronGeometry(1.0, 1);
+    stone.scale(1.5, 1.1, 0.7);
+    B.geo('granite', 'deco', stone, 72.6, 0.9, GATE.z1 - 2.2);
+    B.box('granite', 'deco', 71.4, 73.8, 0, 0.25, GATE.z1 - 2.8, GATE.z1 - 1.6);
+    const carve = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.6), new THREE.MeshBasicMaterial({ map: textTex(380, 120, '#9d998f', '#2b2b2b', ['온라인중학교'], 60), transparent: true }));
+    carve.rotation.y = Math.PI / 2;
+    carve.position.set(74.15, 1.0, GATE.z1 - 2.2);
+    scene.add(carve);
+    block(0, 71.3, 73.9, GATE.z1 - 2.9, GATE.z1 - 1.5);
+  }
+  // 학교 담장은 교문 말고는 지나갈 수 없음
+  block(0, 69.0, 69.6, -46, GATE.z1);
+  block(0, 69.0, 69.6, GATE.z2, 73.4);
+
+  // ── 학교 밖 등굣길 ──
+  {
+    const O = OUT;
+    // 보도 (학교 쪽, 건너편)
+    flatBlocks(O.wall, O.curb, -45, 72.5);
+    flatBlocks(O.road2, O.shops, -45, 72.5);
+    B.box('granite', 'deco', O.curb - 0.18, O.curb, 0, 0.13, -45, 72.5);
+    B.box('granite', 'deco', O.road2, O.road2 + 0.18, 0, 0.13, -45, 72.5);
+    // 차도 (아스팔트 + 노란 중앙선) + 어린이 보호구역 빨간 포장 + 횡단보도
+    const roadTex = canvasTex(128, 256, (g, w, h) => {
+      speckle('#3e4044', ['#46484c', '#36383b', '#505257'], 900, 23, 2)(g, w, h);
+      g.fillStyle = '#e8c23a';
+      g.fillRect(w / 2 - 5, 0, 3, h);
+      g.fillRect(w / 2 + 2, 0, 3, h);
+    });
+    roadTex.repeat.set(1, 117.5 / 8);
+    flat(O.road2 - O.curb, 117.5, roadTex, (O.curb + O.road2) / 2, 0.01, (72.5 - 45) / 2);
+    const zoneTex = canvasTex(64, 64, speckle('#a83a32', ['#b5443b', '#9a332c'], 300, 31, 2));
+    zoneTex.repeat.set(2, 6);
+    const zone = new THREE.Mesh(new THREE.PlaneGeometry(O.road2 - O.curb, 34), new THREE.MeshStandardMaterial({ map: zoneTex, roughness: 0.95 }));
+    zone.rotation.x = -Math.PI / 2;
+    zone.position.set((O.curb + O.road2) / 2, 0.015, 8.5);
+    zone.receiveShadow = true;
+    scene.add(zone);
+    walkables.push(zone);
+    const zoneText = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.6), new THREE.MeshBasicMaterial({ map: textTex(600, 160, 'rgba(0,0,0,0)', '#ffffff', ['어린이 보호구역'], 96), transparent: true }));
+    zoneText.rotation.x = -Math.PI / 2;
+    zoneText.rotation.z = Math.PI / 2;
+    zoneText.position.set((O.curb + O.road2) / 2, 0.02, -2);
+    scene.add(zoneText);
+    for (let x = O.curb + 0.3; x < O.road2 - 0.3; x += 0.9) B.box('white', 'deco', x, x + 0.5, 0.016, 0.022, GATE.z1 + 1.5, GATE.z2 - 1.5); // 횡단보도
+    // 어린이 보호구역 표지판 + 노란 보행 안전 울타리
+    for (const [sx, sz] of [[O.curb - 0.5, -6], [O.curb - 0.5, 24]]) {
+      B.geo('pole', 'deco', new THREE.CylinderGeometry(0.04, 0.04, 2.6, 8), sx, 1.3, sz);
+      const sg = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.8, 0.8),
+        new THREE.MeshBasicMaterial({ map: textTex(200, 200, '#f2c230', '#1f1f1f', ['어린이', '보호구역'], 42, '#c8473d'), side: THREE.DoubleSide }),
+      );
+      sg.rotation.y = Math.PI / 2;
+      sg.position.set(sx, 2.35, sz);
+      scene.add(sg);
+      block(0, sx - 0.15, sx + 0.15, sz - 0.15, sz + 0.15);
+    }
+    for (const [z1, z2] of [[-30, GATE.z1 - 0.5], [GATE.z2 + 0.5, 60]]) {
+      for (let z = z1; z < z2; z += 2) B.box('yellow', 'deco', O.curb - 0.42, O.curb - 0.36, 0, 0.9, z, z + 0.06);
+      B.box('yellow', 'deco', O.curb - 0.42, O.curb - 0.36, 0.82, 0.9, z1, z2);
+      block(0, O.curb - 0.5, O.curb - 0.28, z1, z2);
+    }
+    // 가로수 · 가로등
+    let ti2 = 3;
+    for (let z = -40; z <= 68; z += 9) {
+      if (z > GATE.z1 - 4 && z < GATE.z2 + 4) continue;
+      tree(O.curb - 1.4, z, ti2++);
+    }
+    for (let z = -36; z <= 66; z += 18) {
+      B.geo('pole', 'deco', new THREE.CylinderGeometry(0.06, 0.09, 5.2, 8), O.curb - 0.9, 2.6, z);
+      B.box('pole', 'deco', O.curb - 0.9, O.curb + 0.4, 5.1, 5.2, z - 0.05, z + 0.05);
+      B.box('lamp', 'deco', O.curb + 0.1, O.curb + 0.6, 4.95, 5.1, z - 0.15, z + 0.15);
+      block(0, O.curb - 1.05, O.curb - 0.75, z - 0.15, z + 0.15);
+    }
+    // 건너편 가게들: 학원 · 분식집 · 문방구 · 슈퍼
+    const shop = (z1, z2, name, signBg, signFg, wallMat, awning, floors = 1) => {
+      const x1 = O.shops;
+      const x2 = O.maxX;
+      const H = floors * 3.2;
+      B.box(wallMat, 'wall', x1, x2, 0, H, z1, z2);
+      B.box('glass', 'glass', x1 - 0.06, x1, 0.3, 2.5, z1 + 0.5, z2 - 0.5);
+      B.box('frame', 'deco', x1 - 0.08, x1, 0.3, 0.36, z1 + 0.5, z2 - 0.5);
+      for (let z = z1 + 0.5; z <= z2 - 0.49; z += (z2 - z1 - 1) / 3) B.box('frame', 'deco', x1 - 0.08, x1, 0.3, 2.5, z - 0.04, z + 0.04);
+      if (floors > 1) for (let f = 1; f < floors; f++) B.box('glass', 'glass', x1 - 0.06, x1, f * 3.2 + 0.9, f * 3.2 + 2.4, z1 + 1, z2 - 1);
+      // 줄무늬 차양
+      const aw = new THREE.BoxGeometry(1.4, 0.06, z2 - z1 - 0.6);
+      aw.rotateZ(-0.35);
+      B.geo(awning, 'deco', aw, x1 - 0.65, 2.85, (z1 + z2) / 2);
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(z2 - z1 - 1, 0.9), new THREE.MeshBasicMaterial({ map: textTex(600, 110, signBg, signFg, [name], 76) }));
+      sg.rotation.y = -Math.PI / 2;
+      sg.position.set(x1 - 0.05, 3.4, (z1 + z2) / 2);
+      if (floors > 1) sg.position.y = H - 0.7;
+      scene.add(sg);
+      block(0, x1 - 0.1, x2, z1, z2);
+    };
+    shop(-24, -12, '해법 보습학원', '#2f5aa8', '#ffffff', 'cream', 'blue', 2);
+    shop(-10, 0, '행복 슈퍼', '#2f7a52', '#ffffff', 'cream', 'leaf2');
+    shop(2, 15, '으뜸 문구 · 완구', '#e1b43a', '#c8473d', 'cream', 'red');
+    shop(17, 27, '엄마손 분식', '#c8473d', '#ffffff', 'cream', 'yellow');
+    shop(29, 41, '동네 문방구 2호점', '#f2ead6', '#2b2b2b', 'band', 'blue');
+    // 문방구 앞: 오락기 2대 + 뽑기 기계
+    for (const [z, col] of [[4.2, 'blue'], [5.4, 'red']]) {
+      B.box(col, 'deco', O.shops - 1.1, O.shops - 0.3, 0, 1.55, z - 0.45, z + 0.45);
+      B.box('screen', 'deco', O.shops - 1.11, O.shops - 1.1, 0.95, 1.4, z - 0.3, z + 0.3);
+      B.box('tv', 'deco', O.shops - 1.35, O.shops - 1.1, 0.8, 0.88, z - 0.4, z + 0.4);
+      block(0, O.shops - 1.4, O.shops - 0.3, z - 0.45, z + 0.45);
+    }
+    for (const z of [12.2, 13.2]) {
+      B.box('red', 'deco', O.shops - 0.9, O.shops - 0.3, 0, 0.8, z - 0.35, z + 0.35);
+      B.box('glass', 'glass', O.shops - 0.88, O.shops - 0.32, 0.8, 1.3, z - 0.33, z + 0.33);
+      for (let c = 0; c < 6; c++) B.geo(['yellow', 'blue', 'leaf2', 'white'][c % 4], 'deco', new THREE.SphereGeometry(0.07, 8, 6), O.shops - 0.6 + ((c % 2) - 0.5) * 0.2, 0.9 + Math.floor(c / 2) * 0.1, z - 0.15 + (c % 3) * 0.12);
+      block(0, O.shops - 0.9, O.shops - 0.3, z - 0.35, z + 0.35);
+    }
+  }
+
 
   const built = B.build(scene, mats);
   walkables.push(...built.floor);
