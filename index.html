@@ -25,6 +25,7 @@
         <button class="pill" id="bellBtn" type="button">종소리 듣기</button>
         <button class="pill" id="soundBtn" type="button">🔊 주변 소리</button>
         <button class="pill" id="lookBtn" type="button">👕 꾸미기</button>
+        <button class="pill" id="roomBtn" type="button">🔀 방 바꾸기</button>
       </div>
     </div>
 
@@ -46,6 +47,21 @@
         <p>뭐 먹을래? 골라 보렴~</p>
         <div class="menu" id="shopMenu"></div>
         <button type="button" class="close" id="shopClose">닫기</button>
+      </div>
+    </div>
+
+    <!-- 방(서버) 바꾸기 -->
+    <div class="sheet hidden" id="roomSheet">
+      <div class="sheet-card">
+        <h2>🔀 방 바꾸기</h2>
+        <p id="roomNow"></p>
+        <div class="room-list" id="roomList"></div>
+        <div class="room-custom">
+          <input id="roomInput" maxlength="20" autocomplete="off" placeholder="직접 입력 (예: 2-3반)" />
+          <button type="button" id="roomGo">이동</button>
+        </div>
+        <p class="tip">같은 방 이름을 쓰는 친구끼리 서로 보여요. 한 방이 50명을 넘으면 자동으로 1번 방·2번 방으로 나뉘어요.</p>
+        <button type="button" class="close" id="roomClose">닫기</button>
       </div>
     </div>
 

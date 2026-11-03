@@ -1113,6 +1113,38 @@ document.getElementById('roomBadge').addEventListener('click', () => {
 // ── 입장 화면 ──
 const intro = document.getElementById('intro');
 const nameInput = document.getElementById('nameInput');
+// ── 방(서버) 바꾸기: 처음엔 자동 배정(우리학교), 들어온 뒤 원하는 방으로 이동 ──
+{
+  const sheet = document.getElementById('roomSheet');
+  const list = document.getElementById('roomList');
+  const input = document.getElementById('roomInput');
+  const PRESET = ['우리학교', '1학년', '2학년', '3학년', '선생님'];
+  const goRoom = (name) => {
+    const r = String(name || '').trim().slice(0, 30);
+    if (!r || r === room) return sheet.classList.add('hidden');
+    const u = new URL(location.href);
+    u.searchParams.set('room', r);
+    location.href = u.toString();
+  };
+  document.getElementById('roomBtn').addEventListener('click', () => {
+    document.getElementById('roomNow').textContent = `지금: ${room}${instanceNo ? ` ${instanceNo}번 방` : ''} · ${peopleCount}명`;
+    list.innerHTML = '';
+    for (const r of PRESET) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = r === '우리학교' ? '🏫 우리학교 (자동)' : r;
+      b.classList.toggle('on', r === room);
+      b.addEventListener('click', () => goRoom(r));
+      list.appendChild(b);
+    }
+    input.value = PRESET.includes(room) ? '' : room;
+    sheet.classList.remove('hidden');
+  });
+  document.getElementById('roomGo').addEventListener('click', () => goRoom(input.value));
+  input.addEventListener('keydown', (e) => e.key === 'Enter' && goRoom(input.value));
+  document.getElementById('roomClose').addEventListener('click', () => sheet.classList.add('hidden'));
+  sheet.addEventListener('click', (e) => e.target === sheet && sheet.classList.add('hidden'));
+}
 document.getElementById('introRoom').textContent = `${room}${startClass ? ` · ${startClass.name}` : ''}${isTeacher ? ' · 선생님으로 입장' : ''}`;
 nameInput.value = myName;
 document.getElementById('introForm').addEventListener('submit', (e) => {
