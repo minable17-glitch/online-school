@@ -305,6 +305,9 @@ export function buildWorld(scene, { menu = [] } = {}) {
   const block = (k, x1, x2, z1, z2) =>
     blocks[k].push({ minX: Math.min(x1, x2), maxX: Math.max(x1, x2), minZ: Math.min(z1, z2), maxZ: Math.max(z1, z2) });
   const chairs = [];
+  const swings = []; // 그네 { sw(Group), idx(chairs 번호), phase }
+  const swingSeats = []; // 그네 좌석 메쉬 (누르면 앉기)
+  const JUNGLE = { x1: 0, x2: 0, z1: 0, z2: 0, top: FIELD_Y + 3.0 };
   const boards = new Map(); // 반 id → { canvas, texture }
   const animated = [];
   const artEasels = []; // 미술실 이젤 캔버스 (내가 그린 그림을 걸 수 있음)
@@ -2477,9 +2480,15 @@ export function buildWorld(scene, { menu = [] } = {}) {
         B.geo(cols[(a + b + 2) % 3], 'deco', hz, gx + b, a, gz + 1.5);
       }
     }
-    block(0, gx - 0.2, gx + 3.2, gz - 0.2, gz + 3.2);
+    // 안은 지나다닐 수 있음 (막대 자리만 막음), 꼭대기는 올라가서 걸을 수 있음
+    for (let a = 0; a <= 3; a++) for (let b = 0; b <= 3; b++) block(0, gx + a - 0.12, gx + a + 0.12, gz + b - 0.12, gz + b + 0.12);
+    B.box('metal', 'stair', gx - 0.05, gx + 3.05, 2.98, 3.02, gz - 0.05, gz + 3.05); // 꼭대기 격자 (누르면 올라감)
+    JUNGLE.x1 = gx;
+    JUNGLE.x2 = gx + 3;
+    JUNGLE.z1 = gz;
+    JUNGLE.z2 = gz + 3;
   }
-  // 그네
+  // 그네 (앉을 수 있음: 두 자리, 앉으면 흔들림)
   {
     const gx = 54;
     const gz = 44;
@@ -2494,11 +2503,27 @@ export function buildWorld(scene, { menu = [] } = {}) {
     top.rotateX(Math.PI / 2);
     B.geo('red', 'deco', top, gx, 2.6, gz);
     for (const sz of [gz - 0.9, gz + 0.9]) {
-      B.box('metal', 'deco', gx - 0.01, gx + 0.01, 0.5, 2.6, sz - 0.25, sz - 0.23);
-      B.box('metal', 'deco', gx - 0.01, gx + 0.01, 0.5, 2.6, sz + 0.23, sz + 0.25);
-      B.box('yellow', 'deco', gx - 0.2, gx + 0.2, 0.46, 0.52, sz - 0.27, sz + 0.27);
+      // 줄·좌석은 따로 만들어서 흔들리게 (운동장 높이 기준)
+      const sw = new THREE.Group();
+      const chainMat = new THREE.MeshStandardMaterial({ color: '#8a8f96', metalness: 0.6, roughness: 0.4 });
+      for (const dz of [-0.24, 0.24]) {
+        const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 2.08, 6), chainMat);
+        ch.position.set(0, -1.04, dz);
+        sw.add(ch);
+      }
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.54), new THREE.MeshStandardMaterial({ color: '#e1b43a' }));
+      seat.position.set(0, -2.1, 0);
+      seat.userData.role = 'chair';
+      sw.add(seat);
+      sw.position.set(gx, FIELD_Y + 2.6, sz);
+      scene.add(sw);
+      swingSeats.push(seat);
+      const idx = chairs.length;
+      chairs.push({ x: gx, z: sz, seatY: FIELD_Y + 0.5, ry: -Math.PI / 2, level: 0, room: 'swing', swing: sw });
+      swings.push({ sw, idx, phase: Math.random() * 6 });
+      block(0, gx - 0.6, gx + 0.6, sz - 0.4, sz + 0.4);
     }
-    block(0, gx - 1.2, gx + 1.2, gz - 2.2, gz + 2.2);
+    for (const pz of [gz - 2, gz + 2]) block(0, gx - 0.5, gx + 0.5, pz - 0.3, pz + 0.3);
   }
   B.setY(0);
   // 벤치
@@ -4188,6 +4213,8 @@ export function buildWorld(scene, { menu = [] } = {}) {
     if (x > BACKDOOR.x1 - 0.7 && x < BACKDOOR.x2 + 0.7 && z < Z_BACK && z > Z_BACK - 1.2) return BASE * Math.max(0, (z - (Z_BACK - 1.2)) / 1.2);
     // 옆문 계단 (계단실 → 바깥)
     if (Math.abs(x) > BX && Math.abs(x) < BX + 1.2 && z > -11.6 && z < -9.4) return BASE * Math.max(0, 1 - (Math.abs(x) - BX) / 1.2);
+    // 정글짐 꼭대기 (올라가 있을 땐 위, 아니면 운동장 바닥)
+    if (x > JUNGLE.x1 - 0.3 && x < JUNGLE.x2 + 0.3 && z > JUNGLE.z1 - 0.3 && z < JUNGLE.z2 + 0.3) return nearest([FIELD_Y, JUNGLE.top]);
     // 운동장 (앞마당보다 낮음): 관람석 3단 → 운동장, 양옆은 경사로
     if (z > FIELD_Z && z < 73 && Math.abs(x) < 69.5) {
       if (z < FIELD_Z + 3) {
@@ -4251,6 +4278,8 @@ export function buildWorld(scene, { menu = [] } = {}) {
     artEasels,
     chairMeshes: built.chair,
     stairMeshes: built.stair,
+    swingSeats,
+    jungle: JUNGLE,
     staffSeats,
     carts,
     setCartsVisible: (v) => {
@@ -4262,8 +4291,17 @@ export function buildWorld(scene, { menu = [] } = {}) {
     heightAt,
     sun,
     drawScore,
-    update(t) {
+    update(t, sitting = new Set()) {
       animated.forEach((f) => f(t));
+      // 그네: 누가 앉아 있으면 크게, 아니면 살짝 흔들림
+      for (const g of swings) {
+        const amp = sitting.has(g.idx) ? 0.55 : 0.04;
+        g.sw.rotation.z = Math.sin(t * 1.9 + g.phase) * amp;
+      }
+    },
+    swingAngle: (idx) => {
+      const g = swings.find((q) => q.idx === idx);
+      return g ? g.sw.rotation.z : 0;
     },
   };
 }

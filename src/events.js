@@ -32,9 +32,9 @@ export function createEvents({ scene }) {
     },
     { id: 'patrol1', name: '선도부', look: { outfit: 'navy', hair: 'short', hairColor: 'black', acc: 'none' }, x: 67.6, z: 5.0, ry: Math.PI / 2, lines: ['명찰 확인할게요~', '두발 검사 있어요!'], band: true },
     { id: 'patrol2', name: '선도부', look: { outfit: 'wine', hair: 'bob', hairColor: 'black', acc: 'none' }, x: 67.6, z: 10.2, ry: Math.PI / 2, lines: ['치마 길이 확인합니다~', '안녕하세요! 인사~'], band: true },
-    { id: 'punish1', name: '복장 불량', look: { outfit: 'gymblue', hair: 'long', hairColor: 'brown', acc: 'cap' }, x: 62.0, z: 1.3, ry: 0, lines: ['체육복 입고 와서 걸렸어…', '팔 아파요…'], pose: 'handsup' },
-    { id: 'punish2', name: '지각생', look: { outfit: 'green', hair: 'short', hairColor: 'dark', acc: 'none' }, x: 63.3, z: 1.3, ry: 0, lines: ['버스를 놓쳤어요…', '다신 지각 안 할게요!'], pose: 'handsup' },
-    { id: 'punish3', name: '복장 불량', look: { outfit: 'navy', hair: 'pigtail', hairColor: 'gold', acc: 'none' }, x: 64.6, z: 1.3, ry: 0, lines: ['염색한 거 걸렸다…', '명찰 놓고 왔어요ㅠ'], pose: 'handsup' },
+    { id: 'punish1', name: '복장 불량', look: { outfit: 'gymblue', hair: 'long', hairColor: 'brown', acc: 'cap' }, x: 55.5, z: 1.4, ry: 0, lines: ['체육복 입고 와서 걸렸어…', '팔 아파요…'], pose: 'handsup' },
+    { id: 'punish2', name: '지각생', look: { outfit: 'green', hair: 'short', hairColor: 'dark', acc: 'none' }, x: 56.8, z: 1.4, ry: 0, lines: ['버스를 놓쳤어요…', '다신 지각 안 할게요!'], pose: 'handsup' },
+    { id: 'punish3', name: '복장 불량', look: { outfit: 'navy', hair: 'pigtail', hairColor: 'gold', acc: 'none' }, x: 58.1, z: 1.4, ry: 0, lines: ['염색한 거 걸렸다…', '명찰 놓고 왔어요ㅠ'], pose: 'handsup' },
   ];
 
   // 방과 후 교문 밖 노점

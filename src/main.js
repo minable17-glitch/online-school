@@ -6,7 +6,7 @@
 //            ?room=우리학교&teacher=1  → 선생님 이름표로 입장
 import * as THREE from 'three';
 import './school.css';
-import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX, BRIDGE, HALL_NAMES, OUT, GATE } from './world.js';
+import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOfY, STORE, ROOF, GYM, CAFE, HOOPS, STAIRS, Z_BACK, Z_CORR, BX, BRIDGE, HALL_NAMES, OUT, GATE, FIELD_Y } from './world.js';
 import { createSoccer } from './soccer.js';
 import { createTeachers, SUBJECTS } from './teachers.js';
 import { createEvents, TREATS } from './events.js';
@@ -266,6 +266,7 @@ function sitOn(avatar, index) {
 }
 function standUp(avatar) {
   if (avatar.sitChair) avatar.pos.y = avatar.sitChair.seatY - 0.45 * AVATAR_SCALE;
+  avatar.root.rotation.z = 0;
   avatar.sitChair = null;
   avatar.sitChairIndex = null;
 }
@@ -521,7 +522,7 @@ canvas.addEventListener(
   { passive: false },
 );
 
-const tapTargets = [soccer.mesh, ...world.walkables, ...world.tapBlockers, ...world.chairMeshes, ...world.stairMeshes];
+const tapTargets = [soccer.mesh, ...world.walkables, ...world.tapBlockers, ...world.chairMeshes, ...world.stairMeshes, ...world.swingSeats];
 const tmpN = new THREE.Vector3();
 
 function handleTap(cx, cy) {
@@ -567,6 +568,33 @@ function handleTap(cx, cy) {
     return sitAt(idx);
   }
 
+  // 정글짐 꼭대기를 눌렀나? → 올라가기 / 내려오기
+  if (hit.object.userData.role === 'stair' && hit.point.y > world.jungle.top - 0.5 && hit.point.y < world.jungle.top + 0.5 && hit.point.x > world.jungle.x1 - 1 && hit.point.x < world.jungle.x2 + 1) {
+    const J = world.jungle;
+    const onTop = Math.abs(me.pos.y - J.top) < 0.5;
+    if (onTop) {
+      // 내려오기: 가장 가까운 바깥 바닥으로
+      const ox = me.pos.x < (J.x1 + J.x2) / 2 ? J.x1 - 0.8 : J.x2 + 0.8;
+      me.target = null;
+      me.path = [];
+      me.pos.set(ox, FIELD_Y, Math.max(J.z1, Math.min(J.z2, me.pos.z)));
+      me.play('hand');
+      return hint('정글짐에서 내려왔어요', 1200);
+    }
+    const near = Math.hypot(me.pos.x - Math.max(J.x1, Math.min(J.x2, me.pos.x)), me.pos.z - Math.max(J.z1, Math.min(J.z2, me.pos.z))) < 1.6;
+    if (!near) {
+      // 먼저 정글짐 옆으로 걸어가기
+      const side = { x: J.x1 - 0.8, y: FIELD_Y, z: (J.z1 + J.z2) / 2 };
+      goTo(side, 0);
+      return hint('정글짐 옆에 가서 다시 눌러요', 1600);
+    }
+    me.target = null;
+    me.path = [];
+    me.pos.set(Math.max(J.x1 + 0.3, Math.min(J.x2 - 0.3, hit.point.x)), J.top, Math.max(J.z1 + 0.3, Math.min(J.z2 - 0.3, hit.point.z)));
+    me.play('hand');
+    me.say('정글짐 꼭대기다!');
+    return;
+  }
   // 계단을 눌렀나? → 한 층 올라가거나 내려가기
   if (hit.object.userData.role === 'stair') {
     const st = STAIRS.find((t) => hit.point.x >= t.xs - 0.5 && hit.point.x <= t.xe + 0.5) || STAIRS[0];
@@ -1237,7 +1265,24 @@ function frame() {
   games.update(dt);
   teachers.update(dt, me, roomAt(me.pos.x, me.pos.z, me.pos.y)?.id, camera.position);
   soccer.update(dt, me, !!me.target);
-  world.update(clock.elapsedTime);
+  {
+    const sitting = new Set();
+    if (me.sitChairIndex != null) sitting.add(me.sitChairIndex);
+    for (const { avatar } of others.values()) if (avatar.sitChairIndex != null) sitting.add(avatar.sitChairIndex);
+    world.update(clock.elapsedTime, sitting);
+    // 그네에 앉은 아바타는 그네를 따라 흔들림
+    const ride = (av) => {
+      const c = av.sitChair;
+      if (!c?.swing) return;
+      const ang = world.swingAngle(av.sitChairIndex);
+      const L = 2.1;
+      av.root.position.x = c.x + Math.sin(ang) * L;
+      av.root.position.y = c.seatY - 0.45 * AVATAR_SCALE + (L - Math.cos(ang) * L);
+      av.root.rotation.z = -ang;
+    };
+    ride(me);
+    for (const { avatar } of others.values()) ride(avatar);
+  }
   if (marker.visible) {
     markerT += dt;
     marker.scale.setScalar(1 + markerT * 1.5);
