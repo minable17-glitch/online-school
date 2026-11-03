@@ -1970,172 +1970,209 @@ export function buildWorld(scene, { menu = [] } = {}) {
     return m;
   };
   // ── 화장실 (양끝 계단실 옆, 본관 뒤로 튀어나온 7×5m): 서쪽 남자 · 동쪽 여자 ──
-  // 흰 타일 벽·바닥, 하늘색 칸막이 변기 칸 4개, 소변기(남), 세면대 3개 + 큰 거울, 청소 도구, 환풍기
+  // 배치(복도에서 들어가면): 가운데 통로 / 왼쪽(바깥 벽) 쪽으로 변기 칸 4개가 나란히 / 오른쪽(안쪽 벽) 소변기 줄(남) 또는 세면대(여) /
+  // 뒤쪽 창 아래 긴 세면대 + 거울. 2000년대 느낌: 베이지 타일, 초록 띠 타일, 상아색 칸막이, 쪼그려 앉는 변기 + 고가 수조·쇠줄
   for (let k = 0; k < LEVELS; k++) {
     const L = levelY(k);
     const yb = k === 0 ? 0 : L - 0.2;
     for (const st of STAIRS) {
       if (st.center) continue;
       const west = st.xs < 0;
-      const dir = west ? 1 : -1; // 바깥 벽 → 복도 가운데 방향
-      const outer = west ? st.xs : st.xe; // 건물 끝 벽
-      const inner = west ? st.xe : st.xs;
+      const male = west;
+      const dir = west ? 1 : -1; // 바깥 벽 → 복도 가운데 방향 (+x 가 '안쪽')
+      const outer = west ? st.xs : st.xe; // 건물 끝 벽 면
+      const inner = west ? st.xe : st.xs; // 복도 가운데 쪽 벽 면
+      // 안쪽 공간(벽 두께 뺀 것)
       const ix1 = Math.min(outer + dir * WALL_T, inner - dir * WALL_T);
       const ix2 = Math.max(outer + dir * WALL_T, inner - dir * WALL_T);
-      const z1 = TOILET.z1 + WALL_T; // 안쪽 뒤벽
-      const z2 = Z_BACK; // 복도 쪽 벽 (문 있음)
-      // 바닥 + 벽 + 지붕
+      const z1 = TOILET.z1 + WALL_T; // 뒤벽 안쪽 면
+      const z2 = Z_BACK; // 복도 쪽 벽 안쪽 면
+      const hx = (ix1 + ix2) / 2;
+      const outerIn = outer + dir * WALL_T; // 바깥 벽 안쪽 면 x
+      const innerIn = inner - dir * WALL_T; // 안쪽 벽 안쪽 면 x
+      const X = (from, d) => from + dir * d; // 바깥 벽에서 안쪽으로 d 만큼
+      const span = (a, b) => [Math.min(a, b), Math.max(a, b)];
+
+      // 바닥·벽·천장(위층 바닥) ──
       B.box('tileCheck', 'floor', ix1, ix2, yb, L + 0.01, z1, z2);
-      B.box('cream', 'wall', Math.min(outer, outer + dir * WALL_T), Math.max(outer, outer + dir * WALL_T), yb, L + LEVEL_H - 0.2, TOILET.z1, z2);
-      B.box('cream', 'wall', Math.min(inner, inner - dir * WALL_T), Math.max(inner, inner - dir * WALL_T), yb, L + LEVEL_H - 0.2, TOILET.z1, z2);
-      // 뒤벽: 위쪽 작은 창 (불투명 유리 느낌)
-      B.box('cream', 'wall', outer, inner, yb, L + 2.0, TOILET.z1, z1);
-      B.box('cream', 'wall', outer, inner, L + 2.6, L + LEVEL_H - 0.2, TOILET.z1, z1);
-      B.box('glass', 'glass', ix1 + 0.3, ix2 - 0.3, L + 2.0, L + 2.6, TOILET.z1 + 0.06, z1 - 0.06);
+      B.box('cream', 'wall', ...span(outer, outer + dir * WALL_T), yb, L + LEVEL_H - 0.2, TOILET.z1, z2);
+      B.box('cream', 'wall', ...span(inner, inner - dir * WALL_T), yb, L + LEVEL_H - 0.2, TOILET.z1, z2);
+      B.box('cream', 'wall', ...span(outer, inner), yb, L + 2.0, TOILET.z1, z1); // 뒤벽 아래
+      B.box('cream', 'wall', ...span(outer, inner), L + 2.6, L + LEVEL_H - 0.2, TOILET.z1, z1); // 뒤벽 위
+      B.box('cream', 'wall', ...span(outer, X(outer, 0.5)), L + 2.0, L + 2.6, TOILET.z1, z1);
+      B.box('cream', 'wall', ...span(inner, X(inner, -0.5)), L + 2.0, L + 2.6, TOILET.z1, z1);
+      B.box('glass', 'glass', ix1 + 0.5, ix2 - 0.5, L + 2.0, L + 2.6, TOILET.z1 + 0.06, z1 - 0.06); // 뒤쪽 간유리 띠창
       for (let i = 0; i <= 4; i++) {
-        const wx = ix1 + 0.3 + ((ix2 - ix1 - 0.6) * i) / 4;
+        const wx = ix1 + 0.5 + ((ix2 - ix1 - 1.0) * i) / 4;
         B.box('frame', 'deco', wx - 0.03, wx + 0.03, L + 2.0, L + 2.6, TOILET.z1 - 0.02, z1 + 0.02);
       }
-      B.box('cream', 'wall', outer, inner, L + 2.0, L + 2.6, TOILET.z1, TOILET.z1 + 0.02);
       if (k === LEVELS - 1) {
         B.box('roof', 'wall', Math.min(outer, inner) - 0.2, Math.max(outer, inner) + 0.2, L + LEVEL_H - 0.2, L + LEVEL_H, TOILET.z1 - 0.2, z2);
         block(ROOF, Math.min(outer, inner) - 0.5, Math.max(outer, inner) + 0.5, TOILET.z1 - 1, z2);
-      } else B.box('cream', 'wall', outer, inner, L + LEVEL_H - 0.2, L + LEVEL_H, TOILET.z1, z2); // 위층 바닥 두께
-      // 벽 전체 베이지 타일 (그 시절 학교 화장실)
+      } else B.box('cream', 'wall', ...span(outer, inner), L + LEVEL_H - 0.2, L + LEVEL_H, TOILET.z1, z2);
+      // 벽 타일: 베이지 전체 + 허리 높이 초록 띠 (네 벽)
+      const tileWall = (x1, x2, zz1, zz2) => {
+        B.box('tileBeige', 'deco', x1, x2, L, L + LEVEL_H - 0.2, zz1, zz2);
+        B.box('tileDark', 'deco', x1 - 0.004, x2 + 0.004, L + 1.5, L + 1.62, zz1 - 0.004, zz2 + 0.004);
+      };
+      tileWall(...span(outerIn, X(outerIn, 0.03)), z1, z2);
+      tileWall(...span(innerIn, X(innerIn, -0.03)), z1, z2);
+      tileWall(ix1, ix2, z2 - 0.03, z2);
       B.box('tileBeige', 'deco', ix1, ix2, L, L + 2.0, z1, z1 + 0.03);
       B.box('tileBeige', 'deco', ix1, ix2, L + 2.6, L + LEVEL_H - 0.2, z1, z1 + 0.03);
-      B.box('tileBeige', 'deco', Math.min(outer + dir * WALL_T, outer + dir * (WALL_T + 0.03)), Math.max(outer + dir * WALL_T, outer + dir * (WALL_T + 0.03)), L, L + LEVEL_H - 0.2, z1, z2);
-      B.box('tileBeige', 'deco', Math.min(inner - dir * WALL_T, inner - dir * (WALL_T + 0.03)), Math.max(inner - dir * WALL_T, inner - dir * (WALL_T + 0.03)), L, L + LEVEL_H - 0.2, z1, z2);
-      B.box('tileBeige', 'deco', ix1, ix2, L, L + LEVEL_H - 0.2, z2 - 0.03, z2);
-      // 허리 높이 어두운 초록 띠 타일 (그 시절 화장실 포인트)
       B.box('tileDark', 'deco', ix1, ix2, L + 1.5, L + 1.62, z1, z1 + 0.035);
-      B.box('tileDark', 'deco', Math.min(outer + dir * WALL_T, outer + dir * (WALL_T + 0.035)), Math.max(outer + dir * WALL_T, outer + dir * (WALL_T + 0.035)), L + 1.5, L + 1.62, z1, z2);
-      B.box('tileDark', 'deco', Math.min(inner - dir * WALL_T, inner - dir * (WALL_T + 0.035)), Math.max(inner - dir * WALL_T, inner - dir * (WALL_T + 0.035)), L + 1.5, L + 1.62, z1, z2);
-      B.box('tileDark', 'deco', ix1, ix2, L + 1.5, L + 1.62, z2 - 0.035, z2);
-      // 바닥 배수구 (쇠창살)
-      B.box('darkMetal', 'deco', (ix1 + ix2) / 2 - 0.15, (ix1 + ix2) / 2 + 0.15, L + 0.011, L + 0.02, z1 + 2.6, z1 + 2.9);
-      // 복도 쪽 벽: 문 자리(안쪽 끝)만 뚫림
-      const dA = inner - dir * 1.8;
-      const dB = inner - dir * 0.8;
-      const [da, db] = [Math.min(dA, dB), Math.max(dA, dB)];
+      // 바닥 배수구 (가운데 통로)
+      B.box('darkMetal', 'deco', hx - 0.15, hx + 0.15, L + 0.011, L + 0.02, z1 + 2.2, z1 + 2.5);
+
+      // 복도 쪽 벽: 가운데에 문 ──
+      const dw = 0.95;
+      const [da, db] = [hx - dw / 2, hx + dw / 2];
       B.box('cream', 'wall', Math.min(outer, inner), da, yb, L + LEVEL_H - 0.2, Z_BACK, Z_BACK + WALL_T);
       B.box('cream', 'wall', db, Math.max(outer, inner), yb, L + LEVEL_H - 0.2, Z_BACK, Z_BACK + WALL_T);
       B.box('cream', 'wall', da, db, L + 2.1, L + LEVEL_H - 0.2, Z_BACK, Z_BACK + WALL_T);
       B.box('woodFrame', 'deco', da - 0.05, da, L, L + 2.13, Z_BACK - 0.02, Z_BACK + WALL_T + 0.02);
       B.box('woodFrame', 'deco', db, db + 0.05, L, L + 2.13, Z_BACK - 0.02, Z_BACK + WALL_T + 0.02);
       B.box('woodFrame', 'deco', da - 0.05, db + 0.05, L + 2.1, L + 2.15, Z_BACK - 0.02, Z_BACK + WALL_T + 0.02);
-      B.box('door', 'deco', da + 0.03, da + 0.07, L, L + 2.08, Z_BACK - 0.9, Z_BACK); // 복도 쪽으로 열린 문짝
-      B.box('steel', 'deco', da + 0.02, da + 0.08, L + 0.95, L + 1.05, Z_BACK - 0.25, Z_BACK - 0.15);
-      // 표지판 (남 / 여)
-      const male = west;
+      // 나무 문짝: 복도 쪽으로 70도 열림 (경첩은 바깥 벽 쪽)
+      {
+        // 경첩은 바깥 벽 쪽 문틀, 문짝은 복도 쪽(+z)으로 약 100도 열려 벽에 붙음 → 입구가 훤히 트임
+        // 문짝을 복도 쪽 벽에 붙여 완전히 열어 둠 (경첩: 바깥 벽 쪽 문틀 → 문짝은 바깥 벽 방향으로 벽을 따라 누움)
+        const hinge = west ? da : db;
+        B.box('door', 'deco', ...span(hinge, hinge - dir * (dw - 0.04)), L, L + 2.06, Z_BACK + WALL_T + 0.02, Z_BACK + WALL_T + 0.06);
+        B.box('steel', 'deco', ...span(hinge - dir * 0.15, hinge - dir * 0.25), L + 0.95, L + 1.05, Z_BACK + WALL_T + 0.06, Z_BACK + WALL_T + 0.1);
+      }
       const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), new THREE.MeshBasicMaterial({ map: textTex(100, 100, male ? '#2f6fb3' : '#d9607a', '#ffffff', [male ? '남' : '여'], 56) }));
-      sign.position.set((da + db) / 2, L + 2.5, Z_BACK + WALL_T + 0.02);
+      sign.position.set(hx, L + 2.5, Z_BACK + WALL_T + 0.02);
       scene.add(sign);
       const label = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.3), new THREE.MeshBasicMaterial({ map: textTex(260, 60, '#f7f2e2', '#2b2b2b', [male ? '남자 화장실' : '여자 화장실'], 34, '#7a5532') }));
-      label.position.set((da + db) / 2, L + 2.95, Z_BACK + WALL_T + 0.02);
+      label.position.set(hx, L + 2.95, Z_BACK + WALL_T + 0.02);
       scene.add(label);
-      // 변기 칸 4개 (뒤벽 따라, 깊이 1.3): 상아색 칸막이 + 스테인리스 테두리·발, 문은 반쯤 열림, 쪼그려 앉는 동양식 변기
-      const sd = 1.3;
-      const sw = (ix2 - ix1 - 0.2) / 5;
-      const first = west ? ix1 + 0.1 : ix2 - 0.1 - sw * 4; // 복도 가운데 쪽 한 칸은 청소 도구함
+
+      // 변기 칸 4개: 바깥 벽에 붙여 앞뒤(z)로 나란히. 칸 폭 0.95, 깊이 1.3 (문이 가운데 통로 쪽을 봄) ──
+      const SW = 0.95;
+      const SD = 1.3;
+      const stallX1 = outerIn; // 칸 안쪽(벽 쪽)
+      const stallX2 = X(outerIn, SD); // 칸 문 쪽
+      const sz0 = z1 + 0.15;
       for (let i = 0; i < 4; i++) {
-        const sa = first + i * sw;
-        const sb = sa + sw;
-        const panel = (x1, x2, zz1, zz2) => {
-          B.box('ivory', 'deco', x1, x2, L + 0.18, L + 2.0, zz1, zz2);
-          B.box('steel', 'deco', x1 - 0.005, x2 + 0.005, L + 1.98, L + 2.02, zz1 - 0.005, zz2 + 0.005);
-          B.box('steel', 'deco', x1 - 0.005, x2 + 0.005, L + 0.16, L + 0.2, zz1 - 0.005, zz2 + 0.005);
+        const za = sz0 + i * SW;
+        const zb = za + SW;
+        const [px1, px2] = span(stallX1, stallX2);
+        // 칸막이 (뒤쪽 칸막이 + 마지막 칸 앞 칸막이), 상아색 + 스테인리스 발
+        const panel = (zz) => {
+          B.box('ivory', 'deco', px1, px2, L + 0.18, L + 2.0, zz - 0.015, zz + 0.015);
+          B.box('steel', 'deco', px1, px2, L + 1.98, L + 2.02, zz - 0.02, zz + 0.02);
+          for (const fx of [px1 + 0.2, px2 - 0.2]) B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.18, 6), fx, L + 0.09, zz);
         };
-        panel(sa, sa + 0.03, z1, z1 + sd);
-        if (i === 3) panel(sb - 0.03, sb, z1, z1 + sd);
-        for (const fz of [z1 + 0.2, z1 + sd - 0.2]) B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.18, 6), sa + 0.015, L + 0.09, fz);
-        // 문짝: 짝수 칸은 반쯤 열림, 홀수 칸은 닫힘
+        panel(za);
+        if (i === 3) panel(zb);
+        // 문 (통로 쪽): 1·3번째는 반쯤 열림(통로 쪽으로 45도), 나머지는 닫힘. 경첩은 za 쪽
+        const doorX = X(stallX2, 0); // 문이 달리는 x
         if (i % 2 === 0) {
-          const dg = new THREE.BoxGeometry(sw - 0.16, 1.82, 0.03);
-          dg.translate((sw - 0.16) / 2, 0, 0);
-          dg.rotateY(-0.55);
-          B.geo('ivory', 'deco', dg, sa + 0.08, L + 1.09, z1 + sd - 0.015);
+          const g = new THREE.BoxGeometry(0.03, 1.8, SW - 0.1);
+          g.translate(0, 0, (SW - 0.1) / 2);
+          g.rotateY(-dir * 0.8);
+          B.geo('ivory', 'deco', g, doorX + dir * 0.015, L + 1.09, za + 0.05);
         } else {
-          B.box('ivory', 'deco', sa + 0.08, sb - 0.08, L + 0.18, L + 2.0, z1 + sd - 0.03, z1 + sd);
-          B.box('steel', 'deco', sb - 0.22, sb - 0.17, L + 0.95, L + 1.05, z1 + sd - 0.05, z1 + sd + 0.01);
+          B.box('ivory', 'deco', doorX - 0.015, doorX + 0.015, L + 0.18, L + 1.98, za + 0.05, zb - 0.05);
+          B.box('steel', 'deco', doorX - 0.03, doorX + 0.03, L + 0.95, L + 1.05, zb - 0.25, zb - 0.18); // 손잡이
+          const occ = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.12), new THREE.MeshBasicMaterial({ map: textTex(48, 48, '#c0392b', '#ffffff', ['사용중'], 12) }));
+          occ.rotation.y = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+          occ.position.set(doorX + dir * 0.02, L + 1.5, (za + zb) / 2);
+          scene.add(occ);
         }
-        // 동양식 변기 (바닥에 묻힌 흰 도기 + 길쭉한 구멍) + 물탱크 파이프
-        B.box('white', 'deco', (sa + sb) / 2 - 0.22, (sa + sb) / 2 + 0.22, L + 0.01, L + 0.06, z1 + 0.25, z1 + 0.85);
-        B.box('tv', 'deco', (sa + sb) / 2 - 0.07, (sa + sb) / 2 + 0.07, L + 0.06, L + 0.065, z1 + 0.35, z1 + 0.75);
-        // 높은 물탱크(고가 수조) + 내려오는 파이프 + 당기는 쇠줄
-        B.box('cabinet', 'deco', (sa + sb) / 2 - 0.22, (sa + sb) / 2 + 0.22, L + 2.1, L + 2.4, z1 + 0.04, z1 + 0.2);
-        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 2.05, 6), (sa + sb) / 2 + 0.3, L + 1.08, z1 + 0.1);
-        B.geo('tv', 'deco', new THREE.CylinderGeometry(0.006, 0.006, 0.9, 4), (sa + sb) / 2 - 0.12, L + 1.65, z1 + 0.22);
-        B.geo('darkWood', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.08, 6), (sa + sb) / 2 - 0.12, L + 1.18, z1 + 0.22);
-        B.box('cork', 'deco', sa + 0.08, sa + 0.2, L + 1.1, L + 1.25, z1 + 0.6, z1 + 0.72); // 휴지
+        // 쪼그려 앉는 변기: 바닥에서 한 단 올라온 흰 도기 단 + 가운데 길쭉한 구멍 + 앞쪽 물 내려가는 홈
+        const cz = (za + zb) / 2;
+        const tx1 = X(outerIn, 0.15);
+        const tx2 = X(outerIn, 0.95);
+        B.box('white', 'deco', ...span(tx1, tx2), L + 0.01, L + 0.12, cz - 0.3, cz + 0.3);
+        B.box('tv', 'deco', ...span(X(outerIn, 0.3), X(outerIn, 0.85)), L + 0.12, L + 0.125, cz - 0.09, cz + 0.09);
+        B.box('white', 'deco', ...span(X(outerIn, 0.18), X(outerIn, 0.3)), L + 0.12, L + 0.2, cz - 0.14, cz + 0.14); // 앞 가림턱
+        // 고가 수조(벽 위) + 내려오는 파이프 + 당기는 쇠줄 + 손잡이
+        B.box('cabinet', 'deco', ...span(outerIn, X(outerIn, 0.18)), L + 2.1, L + 2.4, cz - 0.22, cz + 0.22);
+        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 1.9, 6), X(outerIn, 0.08), L + 1.15, cz + 0.24);
+        B.geo('tv', 'deco', new THREE.CylinderGeometry(0.006, 0.006, 0.9, 4), X(outerIn, 0.2), L + 1.65, cz - 0.15);
+        B.geo('darkWood', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.08, 6), X(outerIn, 0.2), L + 1.18, cz - 0.15);
+        // 휴지걸이
+        B.box('cork', 'deco', ...span(X(outerIn, 0.05), X(outerIn, 0.17)), L + 1.0, L + 1.14, cz + 0.3, cz + 0.42);
+        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.01, 0.01, 0.14, 6).rotateX(Math.PI / 2), X(outerIn, 0.11), L + 1.07, cz + 0.36);
       }
-      block(k, ix1, ix2, z1, z1 + sd + 0.1);
-      // 남은 한 칸: 청소 도구 (대걸레·양동이·빗자루)
+      block(k, ...span(stallX1, X(stallX2, 0.1)), sz0 - 0.1, sz0 + 4 * SW + 0.1);
+      // 청소 도구 구석 (변기 칸 줄 끝, 복도 쪽 벽 모서리)
       {
-        const cx = west ? ix2 - 0.1 - sw / 2 : ix1 + 0.1 + sw / 2;
-        B.geo('blue', 'deco', new THREE.CylinderGeometry(0.17, 0.14, 0.3, 10), cx - 0.25, L + 0.15, z1 + 0.5);
-        B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 1.4, 6), cx - 0.2, L + 0.9, z1 + 0.35);
-        B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 1.2, 6), cx + 0.2, L + 0.8, z1 + 0.25);
-        B.box('yellow', 'deco', cx + 0.1, cx + 0.3, L, L + 0.25, z1 + 0.15, z1 + 0.4);
+        const cx = X(outerIn, 0.5);
+        const cz = z2 - 0.45;
+        B.geo('blue', 'deco', new THREE.CylinderGeometry(0.17, 0.14, 0.3, 10), cx, L + 0.15, cz);
+        B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 1.4, 6).rotateX(0.1), X(outerIn, 0.25), L + 0.75, cz - 0.1);
+        B.geo('lectern', 'deco', new THREE.CylinderGeometry(0.012, 0.012, 1.2, 6).rotateX(-0.12), X(outerIn, 0.7), L + 0.65, cz + 0.1);
+        block(k, ...span(outerIn, X(outerIn, 0.95)), z2 - 0.9, z2);
       }
-      // 세면대 3개 + 큰 거울 (건물 끝 벽 쪽)
-      const sinkX = outer + dir * (WALL_T + 0.03);
-      for (let i = 0; i < 3; i++) {
-        const sz = z1 + sd + 0.5 + i * 0.85;
-        B.box('white', 'deco', Math.min(sinkX, sinkX + dir * 0.55), Math.max(sinkX, sinkX + dir * 0.55), L + 0.72, L + 0.87, sz - 0.3, sz + 0.3);
-        B.box('white', 'deco', Math.min(sinkX, sinkX + dir * 0.14), Math.max(sinkX, sinkX + dir * 0.14), L, L + 0.72, sz - 0.1, sz + 0.1);
-        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.22, 6), sinkX + dir * 0.12, L + 0.97, sz);
-        B.box('steel', 'deco', sinkX + dir * 0.12 - 0.02, sinkX + dir * 0.12 + 0.02, L + 1.06, L + 1.08, Math.min(sz, sz + 0.14), Math.max(sz, sz + 0.14));
+
+      // 뒤쪽 창 아래: 긴 세면대(도기 3개 + 거울 한 장 + 비누 줄) ──
+      const sinkZ = z1 + 0.3;
+      const sx1 = X(stallX2, 0.6);
+      const sx2 = X(innerIn, -0.3);
+      const [sxa, sxb] = span(sx1, sx2);
+      B.box('white', 'deco', sxa, sxb, L + 0.72, L + 0.88, z1 + 0.02, sinkZ + 0.3);
+      B.box('white', 'deco', sxa + 0.1, sxb - 0.1, L, L + 0.72, z1 + 0.02, z1 + 0.18);
+      const nS = 3;
+      for (let i = 0; i < nS; i++) {
+        const sx = sxa + 0.35 + ((sxb - sxa - 0.7) * i) / (nS - 1);
+        B.box('cabinet', 'deco', sx - 0.18, sx + 0.18, L + 0.86, L + 0.885, sinkZ - 0.14, sinkZ + 0.16); // 대야 우묵
+        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.22, 6), sx, L + 1.0, z1 + 0.1);
+        B.box('steel', 'deco', sx - 0.02, sx + 0.02, L + 1.09, L + 1.11, z1 + 0.1, z1 + 0.26);
+        B.geo('blue', 'deco', new THREE.CylinderGeometry(0.035, 0.035, 0.02, 8), sx, L + 1.12, z1 + 0.1);
+        B.geo('tv', 'deco', new THREE.CylinderGeometry(0.004, 0.004, 0.3, 4), sx + 0.25, L + 1.12, z1 + 0.06); // 비누 줄
+        B.geo('yellow', 'deco', new THREE.SphereGeometry(0.045, 8, 6).scale(1.3, 0.7, 1), sx + 0.25, L + 0.96, z1 + 0.06);
       }
-      const mirror = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.8), new THREE.MeshStandardMaterial({ color: '#dfeaf0', metalness: 0.3, roughness: 0.15, emissive: '#8fa6b4', emissiveIntensity: 0.35 }));
-      mirror.rotation.y = west ? Math.PI / 2 : -Math.PI / 2;
-      mirror.position.set(sinkX + dir * 0.005, L + 1.7, z1 + sd + 0.5 + 0.85);
+      const mirror = new THREE.Mesh(new THREE.PlaneGeometry(sxb - sxa - 0.2, 0.55), new THREE.MeshStandardMaterial({ color: '#dfeaf0', metalness: 0.3, roughness: 0.15, emissive: '#8fa6b4', emissiveIntensity: 0.35 }));
+      mirror.position.set((sxa + sxb) / 2, L + 1.6, z1 + 0.035);
       scene.add(mirror);
-      B.box('frame', 'deco', Math.min(sinkX, sinkX + dir * 0.02), Math.max(sinkX, sinkX + dir * 0.02), L + 1.28, L + 2.12, z1 + sd + 0.03, z1 + sd + 2.67); // 거울 테두리
-      B.box('lamp', 'deco', Math.min(sinkX, sinkX + dir * 0.08), Math.max(sinkX, sinkX + dir * 0.08), L + 2.18, L + 2.24, z1 + sd + 0.5, z1 + sd + 2.2); // 거울 위 형광등
-      // 세면대마다 줄에 매단 비누 (그물망) + 긴 수도 파이프
-      for (let i = 0; i < 3; i++) {
-        const sz = z1 + sd + 0.5 + i * 0.85;
-        B.geo('tv', 'deco', new THREE.CylinderGeometry(0.004, 0.004, 0.3, 4), sinkX + dir * 0.1, L + 1.13, sz + 0.3);
-        B.geo('yellow', 'deco', new THREE.SphereGeometry(0.045, 8, 6).scale(1, 0.7, 1.3), sinkX + dir * 0.1, L + 0.97, sz + 0.3);
-      }
-      B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 2.4, 6).rotateX(Math.PI / 2), sinkX + dir * 0.1, L + 1.1, z1 + sd + 1.35);
-      // 철망 휴지통 + 표어들
-      B.geo('metal', 'deco', new THREE.CylinderGeometry(0.17, 0.14, 0.4, 10), sinkX + dir * 0.45, L + 0.2, z1 + sd + 3.1);
-      block(k, Math.min(sinkX + dir * 0.2, sinkX + dir * 0.7), Math.max(sinkX + dir * 0.2, sinkX + dir * 0.7), z1 + sd + 2.85, z1 + sd + 3.35);
-      signPlane(['물을 아껴 씁시다'], 0.8, 0.22, sinkX + dir * 0.012, L + 2.4, z1 + sd + 1.35, west ? Math.PI / 2 : -Math.PI / 2, '#2b4a7a', '#ffffff', 30);
-      signPlane(['🚭 금연 · 깨끗이 사용합시다'], 1.3, 0.24, (ix1 + ix2) / 2, L + 2.3, z2 - 0.04, Math.PI, '#ffffff', '#c0392b', 28, '#c0392b');
-      signPlane(['사용 후 물을 꼭 내립시다'], 1.0, 0.22, (ix1 + ix2) / 2, L + 2.7, z1 + 0.04, 0, '#ffffff', '#2b4a7a', 28, '#2b4a7a');
-      block(k, Math.min(sinkX, sinkX + dir * 0.7), Math.max(sinkX, sinkX + dir * 0.7), z1 + sd + 0.1, z2);
-      // 소변기 4개 (남자) / 추가 변기 칸 느낌의 낮은 칸막이(여자)는 생략, 안쪽 벽(복도 가운데 쪽)에 붙임
-      const uX = inner - dir * (WALL_T + 0.03);
+      B.box('frame', 'deco', sxa - 0.02, sxb + 0.02, L + 1.3, L + 1.9, z1 + 0.02, z1 + 0.03);
+      B.box('lamp', 'deco', sxa + 0.3, sxb - 0.3, L + 2.62, L + 2.68, z1 + 0.04, z1 + 0.12); // 거울 위 형광등
+      B.box('ginkgo', 'deco', sxb - 0.08, sxb - 0.04, L + 0.95, L + 1.3, z1 + 0.05, z1 + 0.35); // 수건
+      B.geo('metal', 'deco', new THREE.CylinderGeometry(0.16, 0.13, 0.4, 10), sxb - 0.25, L + 0.2, z1 + 0.65); // 철망 휴지통
+      block(k, sxa - 0.1, sxb + 0.1, z1, sinkZ + 0.5);
+
+      // 안쪽 벽(복도 가운데 쪽): 남자는 소변기 4개, 여자는 손 건조기·생리대 자판기·거울 ──
+      const uX = X(innerIn, -0.02);
       if (male) {
         for (let i = 0; i < 4; i++) {
-          const uz = z1 + sd + 0.6 + i * 0.75;
-          const g = new THREE.CylinderGeometry(0.17, 0.12, 0.55, 12, 1, false, 0, Math.PI);
-          g.rotateY(west ? Math.PI / 2 : -Math.PI / 2);
-          B.geo('white', 'deco', g, uX, L + 0.72, uz);
-          B.geo('white', 'deco', new THREE.SphereGeometry(0.17, 12, 8, 0, Math.PI, 0, Math.PI / 2).rotateY(west ? Math.PI / 2 : -Math.PI / 2), uX, L + 1.0, uz);
-          B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 0.3, 6), uX - dir * 0.02, L + 1.3, uz);
-          B.box('steel', 'deco', uX - 0.04, uX + 0.04, L + 1.42, L + 1.5, uz - 0.04, uz + 0.04);
+          const uz = z1 + 1.5 + i * 0.8;
+          // 벽걸이 소변기: 반원 몸통 + 위 둥근 덮개 + 물 내림 파이프, 사이 낮은 칸막이
+          const body = new THREE.CylinderGeometry(0.17, 0.11, 0.5, 12, 1, false, 0, Math.PI);
+          body.rotateY(dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+          B.geo('white', 'deco', body, uX, L + 0.7, uz);
+          const cap = new THREE.SphereGeometry(0.17, 12, 8, 0, Math.PI, 0, Math.PI / 2);
+          cap.rotateY(dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+          B.geo('white', 'deco', cap, uX, L + 0.95, uz);
+          B.geo('steel', 'deco', new THREE.CylinderGeometry(0.018, 0.018, 0.35, 6), X(innerIn, -0.05), L + 1.28, uz);
+          B.box('steel', 'deco', ...span(X(innerIn, -0.02), X(innerIn, -0.09)), L + 1.44, L + 1.52, uz - 0.05, uz + 0.05);
           if (i < 3) {
-            B.box('ivory', 'deco', Math.min(uX, uX - dir * 0.45), Math.max(uX, uX - dir * 0.45), L + 0.55, L + 1.45, uz + 0.375 - 0.015, uz + 0.375 + 0.015);
-            B.box('steel', 'deco', Math.min(uX, uX - dir * 0.46), Math.max(uX, uX - dir * 0.46), L + 1.44, L + 1.47, uz + 0.375 - 0.02, uz + 0.375 + 0.02);
+            B.box('ivory', 'deco', ...span(innerIn, X(innerIn, -0.45)), L + 0.5, L + 1.45, uz + 0.4 - 0.015, uz + 0.4 + 0.015);
+            B.box('steel', 'deco', ...span(innerIn, X(innerIn, -0.46)), L + 1.44, L + 1.47, uz + 0.4 - 0.02, uz + 0.4 + 0.02);
           }
         }
-        // 소변기 위 자동 세정 수조 + 가로 파이프
-        B.box('cabinet', 'deco', Math.min(uX, uX - dir * 0.2), Math.max(uX, uX - dir * 0.2), L + 2.15, L + 2.45, z1 + sd + 1.3, z1 + sd + 1.9);
-        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 3.0, 6).rotateX(Math.PI / 2), uX - dir * 0.03, L + 1.55, z1 + sd + 1.7);
-        block(k, Math.min(uX, uX - dir * 0.6), Math.max(uX, uX - dir * 0.6), z1 + sd + 0.1, z1 + sd + 3.4);
+        B.box('cabinet', 'deco', ...span(innerIn, X(innerIn, -0.18)), L + 2.15, L + 2.45, z1 + 2.5, z1 + 3.1); // 세정 수조
+        B.geo('steel', 'deco', new THREE.CylinderGeometry(0.02, 0.02, 3.2, 6).rotateX(Math.PI / 2), X(innerIn, -0.06), L + 1.6, z1 + 2.9);
+        block(k, ...span(innerIn, X(innerIn, -0.6)), z1 + 1.1, z1 + 4.3);
       } else {
-        // 여자 화장실: 안쪽 벽에 손 건조기 + 휴지통 + 거울 한 장 더
-        B.box('white', 'deco', Math.min(uX, uX - dir * 0.2), Math.max(uX, uX - dir * 0.2), L + 1.1, L + 1.4, z1 + sd + 0.6, z1 + sd + 0.9);
-        B.box('metal', 'deco', Math.min(uX, uX - dir * 0.35), Math.max(uX, uX - dir * 0.35), L, L + 0.6, z1 + sd + 1.2, z1 + sd + 1.55);
-        block(k, Math.min(uX, uX - dir * 0.45), Math.max(uX, uX - dir * 0.45), z1 + sd + 1.1, z1 + sd + 1.65);
+        B.box('white', 'deco', ...span(innerIn, X(innerIn, -0.2)), L + 1.1, L + 1.4, z1 + 1.6, z1 + 1.9); // 손 건조기
+        B.box('darkMetal', 'deco', ...span(innerIn, X(innerIn, -0.18)), L + 0.9, L + 1.7, z1 + 2.4, z1 + 2.9); // 자판기
+        signPlane(['생리대', '자판기'], 0.4, 0.3, X(innerIn, -0.19), L + 1.5, z1 + 2.65, dir > 0 ? -Math.PI / 2 : Math.PI / 2, '#f4a0b5', '#5a2a3a', 24);
+        const m2 = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.2), new THREE.MeshStandardMaterial({ color: '#dfeaf0', metalness: 0.3, roughness: 0.15, emissive: '#8fa6b4', emissiveIntensity: 0.35 }));
+        m2.rotation.y = dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+        m2.position.set(X(innerIn, -0.02), L + 1.4, z1 + 3.6);
+        scene.add(m2);
+        block(k, ...span(innerIn, X(innerIn, -0.4)), z1 + 1.4, z1 + 3.0);
       }
-      // 환풍기 + 형광등
-      B.geo('metal', 'deco', new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12).rotateX(Math.PI / 2), ix1 + 0.6, L + 2.3, TOILET.z1 + 0.05);
-      for (const lz of [z1 + 1.2, z1 + 3.4]) B.box('lamp', 'deco', (ix1 + ix2) / 2 - 0.6, (ix1 + ix2) / 2 + 0.6, L + 3.32, L + 3.38, lz - 0.08, lz + 0.08);
+
+      // 표어 · 환풍기 · 형광등 ──
+      signPlane(['물을 아껴 씁시다'], 0.8, 0.22, (sxa + sxb) / 2, L + 2.3, z1 + 0.035, 0, '#2b4a7a', '#ffffff', 30);
+      signPlane(['🚭 금연 · 깨끗이 사용합시다'], 1.3, 0.24, hx, L + 2.3, z2 - 0.035, Math.PI, '#ffffff', '#c0392b', 28, '#c0392b');
+      signPlane(['사용 후 물을 꼭 내립시다'], 1.0, 0.22, X(outerIn, 0.035), L + 2.6, (sz0 + sz0 + 4 * SW) / 2, dir > 0 ? Math.PI / 2 : -Math.PI / 2, '#ffffff', '#2b4a7a', 28, '#2b4a7a');
+      B.geo('metal', 'deco', new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12).rotateX(Math.PI / 2), X(innerIn, -0.6), L + 2.95, TOILET.z1 + 0.05);
+      for (const lz of [z1 + 1.3, z1 + 3.5]) B.box('lamp', 'deco', hx - 0.6, hx + 0.6, L + 3.32, L + 3.38, lz - 0.08, lz + 0.08);
     }
   }
 
