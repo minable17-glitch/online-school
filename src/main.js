@@ -18,6 +18,7 @@ import { playSchoolBell, playClap, playPop, unlockAudio, playPianoNote } from '.
 import { createActivities } from './activities.js';
 import { createGames } from './games.js';
 import { createHall } from './hall.js';
+import { createParty } from './party.js';
 import { createAmbience } from './ambience.js';
 
 const params = new URLSearchParams(location.search);
@@ -145,9 +146,13 @@ const activities = createActivities({
 });
 // 명예의 전당 (놀이 기록, 친구들과 합침)
 const hall = createHall({ scene, store, send: (e, p) => net.send(e, p), myId, myName: () => myName });
+// 같이 하기 (놀이 방)
+const party = createParty({ me, myId, myName: () => myName, others, send: (e, p) => net.send(e, p), hint, onStart: (game, opts) => games.startParty(game, opts) });
 // 운동장·교문·보물·닭장 놀이
 const games = createGames({
   hall,
+  party,
+  others,
   scene,
   me,
   world,
@@ -410,6 +415,7 @@ function onAction(a) {
   if (!a?.id || a.id === myId) return;
   // 명예의 전당 판은 친구 상태보다 먼저 올 수 있으니 바로 합침
   if (a.type === 'hall' || a.type === 'hallAll') return hall.receive(a);
+  if (party.receive(a)) return;
   const o = others.get(a.id);
   if (!o) return;
   o.lastSeen = performance.now();

@@ -20,7 +20,18 @@ const el = (tag, cls, html) => {
 };
 const mmss = (sec) => `${Math.floor(sec / 60)}:${String((sec % 60).toFixed(2)).padStart(5, '0')}`;
 
-export function createGames({ scene, me, world, store, hint, getAmbience, onAct, isTeacher, hall }) {
+export function createGames({ scene, me, world, store, hint, getAmbience, onAct, isTeacher, hall, party, others }) {
+  // 같이 할 때 모두 같은 흐름이 되도록 seed 로 고정된 난수
+  const seeded = (seed) => {
+    let s = (seed >>> 0) || 1;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  };
+  // 같이 하는 친구들의 아바타 (others 에 있으면 그 아바타를 움직임)
+  const peerAvatar = (id) => others?.get(id)?.avatar;
+  const myId_ = me.id;
   const ambience = { ding: () => getAmbience()?.ding?.(), rimHit: (v) => getAmbience()?.rimHit?.(v) };
   // ── 공통 HUD: 진행 중 게임 pill + 그만두기 ──
   const hud = el('div', 'game-hud hidden');
@@ -122,7 +133,11 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
   const RX = PITCH.maxX - 8;
   const RZ = (PITCH.maxZ - PITCH.minZ) / 2 - 3;
   const trackAt = (a) => ({ x: CX + Math.sin(a) * RX, z: CZ - Math.cos(a) * RZ });
-  function startRun() {
+  function startRun(opts = null) {
+    const P = opts?.party;
+    const peers = new Map(); // id → { a, ang(진행 각도), done }
+    let tickT = 0;
+    let myRank = null;
     const flags = [];
     const start = trackAt(0);
     const startPos = () => Math.hypot(me.pos.x - start.x, me.pos.z - start.z) < 2.5;
@@ -156,8 +171,28 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
       setTimeout(() => tapBtn.classList.remove('hit'), 80);
     };
     tapBtn.addEventListener('pointerdown', onTap);
-    hint('초록 깃발에 서면 카운트다운! 그다음은 버튼을 빠르게 연타해서 한 바퀴', 3500);
+    hint(P ? '모두 함께 출발! 버튼 연타로 한 바퀴, 먼저 들어오면 1등' : '초록 깃발에 서면 카운트다운! 그다음은 버튼을 빠르게 연타해서 한 바퀴', 3500);
+    let offTick = null;
+    if (P) {
+      offTick = P.onTick((m) => {
+        if (m.id === myId_) return;
+        let pr = peers.get(m.id);
+        if (!pr) {
+          pr = { a: peerAvatar(m.id), ang: 0, done: false };
+          peers.set(m.id, pr);
+        }
+        if (!pr.a) pr.a = peerAvatar(m.id);
+        if (typeof m.ang === 'number') pr.ang = m.ang;
+        if (m.done) pr.done = true;
+      });
+    }
     const finish = () => {
+      if (P) {
+        const finished = [...peers.values()].filter((pr) => pr.done).length;
+        myRank = finished + 1;
+        P.tick({ ang: Math.PI * 2, done: true });
+        P.done(Math.round(t * 100) / 100, mmss(t), 'low');
+      }
       const b = best('run');
       const rec = !b || t < b;
       if (rec) setBest('run', t);
@@ -165,12 +200,44 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
       me.showEmoji('💦', 3);
       onAct?.('run', Math.round(t * 100) / 100);
       const tps = (taps / t).toFixed(1);
-      showResult('달리기 완주!', [`기록 <b>${mmss(t)}</b>`, `연타 ${taps}번 (초당 ${tps}번)`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${mmss(b)}`, hallLine('run', Math.round(t * 100) / 100)], '🏃');
+      if (!P) showResult('달리기 완주!', [`기록 <b>${mmss(t)}</b>`, `연타 ${taps}번 (초당 ${tps}번)`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${mmss(b)}`, hallLine('run', Math.round(t * 100) / 100)], '🏃');
+      else {
+        hallLine('run', Math.round(t * 100) / 100);
+        hint(`${myRank}등으로 들어왔어요! ${mmss(t)}`, 3000);
+      }
       stopGame();
     };
+    if (P) {
+      // 같이 할 땐 시작 신호와 함께 모두 출발선으로 → 카운트다운
+      phase = 'count';
+      countdownStart = performance.now();
+      me.target = null;
+      me.path = [];
+      me.forceMove = true;
+      me.pos.x = start.x;
+      me.pos.z = start.z;
+    }
     startGame({
       name: 'run',
       update(dt) {
+        if (P) {
+          // 같이 뛰는 친구들: 받은 진행 각도로 트랙 위에 놓기
+          for (const [, pr] of peers) {
+            if (!pr.a) continue;
+            const pt = trackAt(pr.ang);
+            pr.a.target = null;
+            pr.a.path = [];
+            pr.a.pos.x += (pt.x - pr.a.pos.x) * Math.min(1, dt * 6);
+            pr.a.pos.z += (pt.z - pr.a.pos.z) * Math.min(1, dt * 6);
+            pr.a.forceMove = !pr.done;
+            pr.a.faceAngle(Math.atan2(Math.cos(pr.ang) * RX, Math.sin(pr.ang) * RZ), dt * 6);
+          }
+          tickT += dt;
+          if (phase === 'run' && tickT > 0.25) {
+            tickT = 0;
+            P.tick({ ang: +a.toFixed(3) });
+          }
+        }
         if (phase === 'go') {
           hudText.textContent = '🏃 초록 깃발로 가세요';
           if (startPos()) {
@@ -223,6 +290,8 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
         me.runSpeed = 0;
         tapBtn.remove();
         for (const f of flags) scene.remove(f);
+        offTick?.();
+        for (const [, pr] of peers) if (pr.a) pr.a.forceMove = false;
       },
     });
   }
@@ -231,7 +300,8 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
   // 🏃 멀리뛰기 (타이밍 게임)
   // ════════════════════════════════════════════════
   const JUMP = { runStart: { x: 65, z: 21 }, board: { x: 58.3, z: 21 }, pitX: 50 };
-  function startJump() {
+  function startJump(opts = null) {
+    const P = opts?.party;
     let phase = 'go'; // go → run → fly → done
     let power = 0;
     let dir = 1;
@@ -310,7 +380,10 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
             if (rec) setBest('jump', m);
             me.say(rec ? `${m}m! 신기록!` : `${m}m 뛰었다~`);
             onAct?.('jump', m);
-            showResult('멀리뛰기', [`<b>${m} m</b>`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${b} m`, hallLine('jump', m)], '🦘');
+            if (P) {
+              hallLine('jump', m);
+              P.done(m, `${m} m`, 'high');
+            } else showResult('멀리뛰기', [`<b>${m} m</b>`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${b} m`, hallLine('jump', m)], '🦘');
             stopGame();
           }
         }
@@ -634,7 +707,10 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
   // 🧊 얼음땡 (단체): 술래 NPC가 운동장을 뛰어다님
   // ════════════════════════════════════════════════
   const inField = (p) => p.x > PITCH.minX + 1 && p.x < PITCH.maxX - 1 && p.z > PITCH.minZ + 1 && p.z < PITCH.maxZ - 1;
-  function startTag() {
+  function startTag(opts = null) {
+    const P = opts?.party;
+    const rnd = seeded(opts?.seed ?? Math.random() * 1e9);
+    const RR = (lo, hi) => lo + rnd() * (hi - lo);
     const it = new Avatar({ id: `it-${Math.random()}`, name: '술래', look: { outfit: 'gym', hair: 'short', hairColor: 'black', acc: 'cap' }, occlude: true });
     it.pos.set(0, FIELD_Y, 41);
     scene.add(it.root);
@@ -644,17 +720,45 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
     let retarget = 0;
     let tgt = { x: 0, z: 41 };
     const frozenUntil = { v: 0 };
-    hint('술래가 쫓아와요! 운동장 안에서 60초 동안 안 잡히기. 잡히면 3초 얼음', 3500);
+    hint(P ? '술래가 가장 가까운 사람을 쫓아요! 60초 동안 덜 잡히는 사람이 이김' : '술래가 쫓아와요! 운동장 안에서 60초 동안 안 잡히기. 잡히면 3초 얼음', 3500);
+    // 같이 할 때: 술래는 '가장 가까운 멤버'를 쫓음 (각자 화면에서 같은 규칙)
+    const memberTargets = () => {
+      const list = [{ id: 'me', x: me.pos.x, z: me.pos.z, ok: inField(me.pos) && performance.now() > frozenUntil.v }];
+      if (P) for (const id of P.members().keys()) {
+        const av = peerAvatar(id);
+        if (av) list.push({ id, x: av.pos.x, z: av.pos.z, ok: inField(av.pos) && !av.partyFrozen });
+      }
+      return list.filter((mm) => mm.ok);
+    };
+    let offTick = null;
+    if (P) offTick = P.onTick((m) => {
+      const av = peerAvatar(m.id);
+      if (!av || !m.frozen) return;
+      av.partyFrozen = true;
+      av.say('얼음!');
+      av.showEmoji('🧊', 3);
+      setTimeout(() => (av.partyFrozen = false), 3000);
+    });
     startGame({
       name: 'tag',
       update(dt) {
         t += dt;
-        const chasing = inField(me.pos) && performance.now() > frozenUntil.v;
+        let nearest = null;
+        let nd = Infinity;
+        for (const c of memberTargets()) {
+          const dd = Math.hypot(c.x - it.pos.x, c.z - it.pos.z);
+          if (dd < nd) {
+            nd = dd;
+            nearest = c;
+          }
+        }
+        const chasing = !!nearest;
+        const chasingMe = nearest?.id === 'me';
         retarget -= dt;
-        if (chasing) tgt = { x: me.pos.x, z: me.pos.z };
+        if (chasing) tgt = { x: nearest.x, z: nearest.z };
         else if (retarget <= 0) {
-          retarget = R(1.5, 3);
-          tgt = { x: R(PITCH.minX + 5, PITCH.maxX - 5), z: R(PITCH.minZ + 5, PITCH.maxZ - 5) };
+          retarget = RR(1.5, 3);
+          tgt = { x: RR(PITCH.minX + 5, PITCH.maxX - 5), z: RR(PITCH.minZ + 5, PITCH.maxZ - 5) };
         }
         const dx = tgt.x - it.pos.x;
         const dz = tgt.z - it.pos.z;
@@ -668,8 +772,9 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
         it.pos.x = Math.max(PITCH.minX + 1, Math.min(PITCH.maxX - 1, it.pos.x));
         it.pos.z = Math.max(PITCH.minZ + 1, Math.min(PITCH.maxZ - 1, it.pos.z));
         it.update(dt, world.heightAt);
-        if (chasing && d < 0.9) {
+        if (chasingMe && d < 0.9) {
           frozen++;
+          P?.tick({ frozen: true });
           frozenUntil.v = performance.now() + 3000;
           me.target = null;
           me.path = [];
@@ -682,7 +787,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
             me.say('땡!');
           }, 3000);
         }
-        if (chasing && d > 0.9 && d < 2.2) dodges += dt;
+        if (chasingMe && d > 0.9 && d < 2.2) dodges += dt;
         if (!inField(me.pos)) hudText.textContent = '🧊 운동장 안으로 들어가요!';
         else hudText.textContent = `🧊 ${Math.max(0, 60 - t).toFixed(0)}초 남음 · 잡힘 ${frozen}`;
         if (t >= 60) {
@@ -693,13 +798,17 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
           it.say('휴, 그만하자~');
           me.say(frozen ? '아슬아슬했다!' : '한 번도 안 잡혔다! 😎');
           onAct?.('tag', score);
-          showResult('얼음땡 끝!', [`잡힌 횟수 ${frozen}번 · 아슬아슬 피하기 ${dodges.toFixed(0)}초`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`, hallLine('tag', score)], '🧊');
+          if (P) {
+            hallLine('tag', score);
+            P.done(score, `${score}점 (잡힘 ${frozen})`, 'high');
+          } else showResult('얼음땡 끝!', [`잡힌 횟수 ${frozen}번 · 아슬아슬 피하기 ${dodges.toFixed(0)}초`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`, hallLine('tag', score)], '🧊');
           stopGame();
         }
       },
       stop() {
         me.frozen = false;
         it.dispose();
+        offTick?.();
       },
     });
   }
@@ -707,7 +816,10 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
   // ════════════════════════════════════════════════
   // 🏐 피구 (단체): 코트 안에서 날아오는 공 피하기
   // ════════════════════════════════════════════════
-  function startDodge() {
+  function startDodge(opts = null) {
+    const P = opts?.party;
+    const rnd = seeded(opts?.seed ?? Math.random() * 1e9);
+    const RR = (lo, hi) => lo + rnd() * (hi - lo);
     const court = { x1: -14, x2: 14, z1: 30, z2: 52 };
     const throwers = [];
     const balls = [];
@@ -737,13 +849,13 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
       const a = new Avatar({ id: `thrower-${i}-${Math.random()}`, name: '상대팀', look: looks[i], occlude: true });
       a.pos.set(s.x, FIELD_Y, s.z);
       scene.add(a.root);
-      throwers.push({ a, next: R(1, 3) });
+      throwers.push({ a, next: RR(1, 3) });
     });
     let t = 0;
     let hits = 0;
     let dodged = 0;
     const inCourt = () => me.pos.x > court.x1 && me.pos.x < court.x2 && me.pos.z > court.z1 && me.pos.z < court.z2;
-    hint('흰 선 안(코트)에서 60초 동안 공을 피하세요! 공이 오면 옆으로!', 3500);
+    hint(P ? '같은 순서로 공이 날아와요! 60초 동안 더 많이 피하는 사람이 이김' : '흰 선 안(코트)에서 60초 동안 공을 피하세요! 공이 오면 옆으로!', 3500);
     startGame({
       name: 'dodge',
       update(dt) {
@@ -754,7 +866,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
           th.a.update(dt, world.heightAt);
           th.next -= dt * rate;
           if (th.next <= 0 && inCourt()) {
-            th.next = R(2.5, 5);
+            th.next = RR(2.5, 5);
             th.a.play('hand');
             // 내 위치 + 약간의 예측
             const lead = me.target ? 0.5 : 0;
@@ -795,7 +907,10 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
           if (rec) setBest('dodge', score);
           me.say(hits >= 5 ? '아웃… 다음엔 꼭!' : '살아남았다! 🏐');
           onAct?.('dodge', score);
-          showResult(hits >= 5 ? '아웃!' : '피구 끝!', [`피한 공 ${dodged}개 · 맞은 공 ${hits}개`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`, hallLine('dodge', score)], hits >= 5 ? '💥' : '🏐');
+          if (P) {
+            hallLine('dodge', score);
+            P.done(score, `${score}점 (피함 ${dodged} · 맞음 ${hits})`, 'high');
+          } else showResult(hits >= 5 ? '아웃!' : '피구 끝!', [`피한 공 ${dodged}개 · 맞은 공 ${hits}개`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`, hallLine('dodge', score)], hits >= 5 ? '💥' : '🏐');
           stopGame();
         }
       },
@@ -815,12 +930,17 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
   function available() {
     const g = [];
     if (onField()) {
-      g.push({ icon: '🏃', name: '운동장 한 바퀴', desc: `깃발 4개 돌고 돌아오기${best('run') ? ` · 최고 ${mmss(best('run'))}` : ''}`, start: startRun });
-      g.push({ icon: '🧊', name: '얼음땡', desc: `술래 피해 60초 버티기${best('tag') ? ` · 최고 ${best('tag')}점` : ''}`, start: startTag });
-      g.push({ icon: '🏐', name: '피구', desc: `날아오는 공 피하기${best('dodge') ? ` · 최고 ${best('dodge')}점` : ''}`, start: startDodge });
-      if (nearJump()) g.push({ icon: '🦘', name: '멀리뛰기', desc: `타이밍 맞춰 점프${best('jump') ? ` · 최고 ${best('jump')}m` : ''}`, start: startJump });
+      const nearby = others ? [...others.values()].filter((o) => Math.hypot(o.avatar.pos.x - me.pos.x, o.avatar.pos.z - me.pos.z) < 60).length : 0;
+      const both = (icon, name, desc, key, fn) => {
+        g.push({ icon, name: `${name} · 혼자`, desc, start: () => fn() });
+        if (party) g.push({ icon, name: `${name} · 같이`, desc: nearby ? `근처 친구 ${nearby}명 초대해서 대결` : '근처에 친구가 없어요 (혼자라도 됨)', start: () => party.host(key) });
+      };
+      both('🏃', '운동장 한 바퀴', `연타로 트랙 한 바퀴${best('run') ? ` · 최고 ${mmss(best('run'))}` : ''}`, 'run', startRun);
+      both('🧊', '얼음땡', `술래 피해 60초 버티기${best('tag') ? ` · 최고 ${best('tag')}점` : ''}`, 'tag', startTag);
+      both('🏐', '피구', `날아오는 공 피하기${best('dodge') ? ` · 최고 ${best('dodge')}점` : ''}`, 'dodge', startDodge);
+      if (nearJump()) both('🦘', '멀리뛰기', `타이밍 맞춰 점프${best('jump') ? ` · 최고 ${best('jump')}m` : ''}`, 'jump', startJump);
     }
-    if (nearGateIn() || me.pos.x > OUT.wall) g.push({ icon: '🕵️', name: '몰래 들어가기', desc: `선도부 시야 피해 현관까지${best('sneak') ? ` · 최고 ${best('sneak')}점` : ''}`, start: startSneak });
+    if (nearGateIn() || me.pos.x > OUT.wall) g.push({ icon: '🕵️', name: '몰래 들어가기', desc: `선도부 시야 피해 현관까지 · 기록 대결${best('sneak') ? ` · 최고 ${best('sneak')}점` : ''}`, start: startSneak });
     if (hall?.nearBoard(me.pos)) g.push({ icon: '🏆', name: '명예의 전당', desc: '친구들 최고 기록 보기', start: () => hall.open('run') });
     g.push({ icon: '🗺️', name: '보물찾기 힌트', desc: `오늘의 쪽지 ${ensureTreasure().found.size}/3`, start: startTreasure });
     if (onRoof() && nearCoop()) {
@@ -830,8 +950,14 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
     return g;
   }
 
+  // 같이 하기: 주최자가 시작을 누르면 모두 여기로
+  const STARTERS = { run: startRun, tag: startTag, dodge: startDodge, jump: startJump };
+  function startParty(game, opts) {
+    STARTERS[game]?.(opts);
+  }
   let syncT = 0;
   return {
+    startParty,
     update(dt) {
       // 점프 높이: 아바타 루트에 더함
       if (me.jumpY) me.root.position.y = me.pos.y + me.jumpY;
@@ -841,7 +967,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
         syncT = 0;
         tickTreasure();
         tickCoop();
-        const canPlay = !active && !isTeacher && available().length > 0;
+        const canPlay = !active && !isTeacher && !party?.active() && available().length > 0;
         playBtn.classList.toggle('hidden', !canPlay);
         if (canPlay) playBtn.textContent = hall?.nearBoard(me.pos) ? '🏆 명예의 전당' : onRoof() && nearCoop() ? '🐤 닭장' : nearGateIn() || me.pos.x > OUT.wall ? '🕵️ 놀이하기' : onField() ? '🎲 운동장 놀이' : '🗺️ 보물찾기';
       }
