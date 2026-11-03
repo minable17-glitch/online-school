@@ -1118,7 +1118,7 @@ const nameInput = document.getElementById('nameInput');
   const sheet = document.getElementById('roomSheet');
   const list = document.getElementById('roomList');
   const input = document.getElementById('roomInput');
-  const PRESET = ['우리학교', '1학년', '2학년', '3학년', '선생님'];
+  const PRESET = ['우리학교', ...[1, 2, 3].flatMap((g) => [1, 2, 3, 4].map((c) => `${g}-${c}반`))];
   const goRoom = (name) => {
     const r = String(name || '').trim().slice(0, 30);
     if (!r || r === room) return sheet.classList.add('hidden');
@@ -1132,7 +1132,7 @@ const nameInput = document.getElementById('nameInput');
     for (const r of PRESET) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.textContent = r === '우리학교' ? '🏫 우리학교 (자동)' : r;
+      b.textContent = r === '우리학교' ? '🏫 우리학교 (전체 · 자동)' : r;
       b.classList.toggle('on', r === room);
       b.addEventListener('click', () => goRoom(r));
       list.appendChild(b);
