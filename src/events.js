@@ -4,6 +4,7 @@
 // 시간표(schedule.js)를 따르므로 모든 친구 화면에서 같은 때 나타남
 import * as THREE from 'three';
 import { Avatar } from './avatar.js';
+import { FIELD_Y } from './world.js';
 
 const R = (a, b) => a + Math.random() * (b - a);
 
@@ -18,6 +19,7 @@ export const TREATS = [
 export function createEvents({ scene }) {
   const npcs = new Map(); // id → { avatar, spec }
   const props = new Map(); // id → THREE.Group
+  const npcs_walk = new Map(); // id → { i } 돌아다니는 NPC 진행 상태
 
   // 등교 시간 사람들
   const MORNING = [
@@ -35,6 +37,23 @@ export function createEvents({ scene }) {
     { id: 'punish1', name: '복장 불량', look: { outfit: 'gymblue', hair: 'long', hairColor: 'brown', acc: 'cap' }, x: 55.5, z: 1.4, ry: 0, lines: ['체육복 입고 와서 걸렸어…', '팔 아파요…'], pose: 'handsup' },
     { id: 'punish2', name: '지각생', look: { outfit: 'green', hair: 'short', hairColor: 'dark', acc: 'none' }, x: 56.8, z: 1.4, ry: 0, lines: ['버스를 놓쳤어요…', '다신 지각 안 할게요!'], pose: 'handsup' },
     { id: 'punish3', name: '복장 불량', look: { outfit: 'navy', hair: 'pigtail', hairColor: 'gold', acc: 'none' }, x: 58.1, z: 1.4, ry: 0, lines: ['염색한 거 걸렸다…', '명찰 놓고 왔어요ㅠ'], pose: 'handsup' },
+  ];
+
+  // 학교 곳곳 사람들 (항상 있음). walk: 돌아다니는 길, y: 높이(운동장은 FIELD_Y)
+  const PEOPLE = [
+    { id: 'pe-teacher', name: '체육 선생님', look: { outfit: 'gym', hair: 'buzz', hairColor: 'black', acc: 'cap' }, x: -10, z: 28, y: FIELD_Y, ry: 0, walk: [{ x: -10, z: 28 }, { x: 10, z: 28 }, { x: 10, z: 50 }, { x: -10, z: 50 }], speed: 1.4, lines: ['줄 맞춰 서! 앞으로 나란히~', '삑! 뛰지 말고 걸어!', '오늘 체력장이다~', '호루라기 소리 들리면 집합!'], whistle: true },
+    { id: 'soccer1', name: '축구부', look: { outfit: 'gymblue', hair: 'short', hairColor: 'black', acc: 'none' }, x: -30, z: 40, y: FIELD_Y, ry: 1.2, walk: [{ x: -30, z: 40 }, { x: -22, z: 36 }, { x: -26, z: 46 }, { x: -34, z: 44 }], speed: 2.6, lines: ['패스! 패스!', '야 여기 비었어!', '골~~!', '다시, 다시!'] },
+    { id: 'soccer2', name: '축구부', look: { outfit: 'gymblue', hair: 'buzz', hairColor: 'dark', acc: 'none' }, x: -24, z: 42, y: FIELD_Y, ry: -1.2, walk: [{ x: -24, z: 42 }, { x: -32, z: 38 }, { x: -28, z: 48 }, { x: -20, z: 44 }], speed: 2.4, lines: ['내가 골키퍼 할게', '슛 때려!', '아 아깝다~'] },
+    { id: 'girls1', name: '수다 떠는 친구', look: { outfit: 'navy', hair: 'pigtail', hairColor: 'black', acc: 'ribbon' }, x: 30, z: 26, y: FIELD_Y, ry: Math.PI, lines: ['어제 그 드라마 봤어?', '매점 갈래?', '야 너 숙제 했어?', '쉿, 선생님 온다'] },
+    { id: 'girls2', name: '수다 떠는 친구', look: { outfit: 'navy', hair: 'bob', hairColor: 'brown', acc: 'none' }, x: 31.2, z: 26.2, y: FIELD_Y, ry: Math.PI * 0.8, lines: ['진짜? 대박', '나 오늘 야자 빼먹을까', '사진 찍자~ 하나 둘 셋!'] },
+    { id: 'janitor', name: '청소 아주머니', look: { outfit: 'beige', hair: 'bun', hairColor: 'dark', acc: 'hairnet' }, x: -30, z: -11.5, y: 0.6, ry: Math.PI / 2, walk: [{ x: -30, z: -11.5 }, { x: 0, z: -11.5 }, { x: 30, z: -11.5 }, { x: 0, z: -11.5 }], speed: 0.9, lines: ['복도에서 뛰지 마라~', '쓰레기는 쓰레기통에!', '아이고 허리야', '발 들어 봐, 여기 닦아야 돼'], hold: 'mop' },
+    { id: 'guard', name: '경비 아저씨', look: { outfit: 'suit', hair: 'buzz', hairColor: 'dark', acc: 'cap' }, x: 62.8, z: 1.5, y: 0, ry: Math.PI, walk: [{ x: 62.8, z: 1.5 }, { x: 62.8, z: -5 }, { x: 56, z: -8 }, { x: 62.8, z: 1.5 }], speed: 0.8, lines: ['늦었다, 빨리 들어가~', '외부인은 경비실에 적고 가세요', '자전거는 보관대에!', '오늘도 수고~'] },
+    { id: 'reader', name: '책 읽는 학생', look: { outfit: 'wine', hair: 'long', hairColor: 'dark', acc: 'glasses' }, x: -37, z: 5.5, y: 0, ry: 0, lines: ['쉿… 지금 중요한 장면이야', '이 책 진짜 재밌어', '도서실에서 빌렸어'], hold: 'book' },
+    { id: 'runner', name: '지각 직전', look: { outfit: 'green', hair: 'short', hairColor: 'brown', acc: 'none' }, x: 88, z: 10, y: 0, ry: -Math.PI / 2, walk: [{ x: 90, z: 9 }, { x: 72, z: 8.5 }, { x: 48, z: 7 }, { x: 10, z: 5 }, { x: 10, z: 20 }, { x: 90, z: 20 }], speed: 3.2, lines: ['헉헉… 늦었다!', '종 치기 전에!', '비켜 주세요~!'] },
+    { id: 'duty', name: '주번', look: { outfit: 'navy', hair: 'short', hairColor: 'black', acc: 'none' }, x: 20, z: -11.5, y: 0.6, ry: -Math.PI / 2, walk: [{ x: 20, z: -11.5 }, { x: 44, z: -11.5 }, { x: 20, z: -11.5 }], speed: 1.3, lines: ['우유 가지러 가야 돼', '칠판 지우는 거 내 차례야', '분필 가지러 교무실 갔다 올게'], hold: 'milk' },
+    { id: 'couple1', name: '그네 타는 친구', look: { outfit: 'wine', hair: 'bob', hairColor: 'black', acc: 'none' }, x: 56.5, z: 44.9, y: FIELD_Y, ry: -Math.PI / 2, lines: ['그네 높이 밀어 줘!', '우와 하늘 닿겠다', '다음은 네 차례'] },
+    { id: 'cook-out', name: '급식실 아주머니', look: { outfit: 'beige', hair: 'bun', hairColor: 'dark', acc: 'hairnet' }, x: 17, z: -41, y: 0, ry: Math.PI, lines: ['오늘 식자재 왔네~', '무 한 박스 더!', '휴, 잠깐 쉬자'] },
+    { id: 'admin-out', name: '행정실 주무관', look: { outfit: 'suit', hair: 'short', hairColor: 'dark', acc: 'glasses' }, x: 58, z: -3, y: 0, ry: Math.PI / 2, walk: [{ x: 58, z: -3 }, { x: 50, z: -3 }, { x: 50, z: 3 }, { x: 58, z: 3 }], speed: 1.0, lines: ['차 좀 빼 주세요~', '택배 왔나?', '공문 보내러 갑니다'] },
   ];
 
   // 방과 후 교문 밖 노점
@@ -80,9 +99,26 @@ export function createEvents({ scene }) {
 
   function spawn(spec) {
     const a = new Avatar({ id: `ev-${spec.id}`, name: spec.name, look: spec.look, color: spec.color, occlude: true });
-    a.pos.set(spec.x, 0, spec.z);
+    a.pos.set(spec.x, spec.y || 0, spec.z);
     a.root.rotation.y = spec.ry;
     if (spec.pose) a.play(spec.pose);
+    if (spec.hold === 'mop') {
+      const h = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.5, 6), new THREE.MeshStandardMaterial({ color: '#8a5a36' }));
+      h.rotation.z = 0.3;
+      h.position.set(0.1, -0.3, 0.1);
+      a.armR.add(h);
+    } else if (spec.hold === 'book') {
+      const bk = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.3, 0.04), new THREE.MeshStandardMaterial({ color: '#3b6fb0' }));
+      bk.position.set(0, -0.42, 0.14);
+      bk.rotation.x = -0.5;
+      a.armL.add(bk);
+      a.play('hand');
+    } else if (spec.hold === 'milk') {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.25, 0.35), new THREE.MeshStandardMaterial({ color: '#4fb065' }));
+      box.position.set(0.22, -0.4, 0.3);
+      a.armR.add(box);
+    }
+    if (spec.walk) npcs_walk.set(spec.id, { i: 1 });
     if (spec.band) {
       // 선도부 완장
       const band = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.08, 10), new THREE.MeshStandardMaterial({ color: '#c8473d' }));
@@ -105,7 +141,7 @@ export function createEvents({ scene }) {
   function sync(period) {
     if (kind !== null) return;
     kind = period.kind;
-    for (const spec of [...MORNING, ...AFTER]) spawn(spec);
+    for (const spec of [...MORNING, ...AFTER, ...PEOPLE]) spawn(spec);
   }
 
   // 매 프레임
@@ -114,12 +150,36 @@ export function createEvents({ scene }) {
     t += dt;
     for (const n of npcs.values()) {
       const a = n.avatar;
-      a.update(dt, () => 0);
-      a.faceAngle(n.spec.ry, dt);
+      const w = npcs_walk.get(n.spec.id);
+      if (w) {
+        const path = n.spec.walk;
+        const tgt = path[w.i];
+        const dx = tgt.x - a.pos.x;
+        const dz = tgt.z - a.pos.z;
+        const dd = Math.hypot(dx, dz);
+        if (dd < 0.3) {
+          w.i = (w.i + 1) % path.length;
+          if (!w.pause) w.pause = R(0.5, 3);
+        }
+        if (w.pause > 0) {
+          w.pause -= dt;
+          a.forceMove = false;
+        } else {
+          a.pos.x += (dx / dd) * n.spec.speed * dt;
+          a.pos.z += (dz / dd) * n.spec.speed * dt;
+          a.faceAngle(Math.atan2(dx, dz), dt * 4);
+          a.forceMove = true;
+        }
+        a.update(dt, () => n.spec.y || 0);
+      } else {
+        a.update(dt, () => n.spec.y || 0);
+        a.faceAngle(n.spec.ry, dt);
+      }
+      if (n.spec.whistle && Math.random() < dt * 0.08) a.showEmoji('📣', 2);
       if (camPos) a.tagHolder.visible = camPos.distanceTo(a.root.position) > 3.4;
       const d = Math.hypot(me.pos.x - a.pos.x, me.pos.z - a.pos.z);
       n.nextTalk -= dt;
-      if (d < 6 && me.pos.y < 1) {
+      if (d < 6 && Math.abs(me.pos.y - (n.spec.y || 0)) < 1.5) {
         if (!n.greeted) {
           n.greeted = true;
           a.say(n.spec.lines[0]);

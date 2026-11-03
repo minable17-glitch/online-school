@@ -2557,32 +2557,91 @@ export function buildWorld(scene, { menu = [] } = {}) {
     B.box('blueRoof', 'wall', S.minX - 0.5, S.maxX + 0.5, H, H + 0.2, S.minZ - 0.4, S.maxZ + 1.2);
     // 바닥
     B.box('terrazzo', 'deco', S.minX + 0.2, S.maxX - 0.2, 0, 0.03, S.minZ + 0.2, z1);
-    // 계산대 + 금전등록기
+    // ── 2000년대 매점 안: 나무 계산대 + 쇠 금고 + 주판·전자계산기, 뒤 선반에 담배 모양 작은 상자 대신 사탕 유리병·껌통,
+    //    벽 선반에 라면·빵 상자, 가운데 섬 진열대(과자 봉지), 빨간 코카콜라 냉장고, 아이스크림 냉동고(뚜껑 유리),
+    //    컵라면용 온수기·나무젓가락통, 천장 백열등·선풍기, 벽에 달력·'학생 외상 사절' 종이, 바닥 회색 타일 ──
+    B.box('tileCheck', 'deco', S.minX + 0.2, S.maxX - 0.2, 0.03, 0.04, S.minZ + 0.2, z1);
+    // 계산대 (나무, 앞면에 작은 광고 스티커)
     B.box('lectern', 'deco', S.minX + 1.5, S.maxX - 1.5, 0, 1.0, S.minZ + 1.6, S.minZ + 2.2);
-    B.box('white', 'deco', S.minX + 1.4, S.maxX - 1.4, 1.0, 1.05, S.minZ + 1.5, S.minZ + 2.3);
-    B.box('tv', 'deco', S.minX + 4.3, S.minX + 4.9, 1.05, 1.35, S.minZ + 1.6, S.minZ + 2.0);
+    B.box('deskTop', 'deco', S.minX + 1.4, S.maxX - 1.4, 1.0, 1.05, S.minZ + 1.5, S.minZ + 2.3);
+    B.box('red', 'deco', S.minX + 2.0, S.minX + 2.8, 0.4, 0.7, S.minZ + 2.2, S.minZ + 2.21); // 광고 스티커
+    B.box('yellow', 'deco', S.maxX - 3.0, S.maxX - 2.2, 0.4, 0.7, S.minZ + 2.2, S.minZ + 2.21);
+    B.box('darkMetal', 'deco', S.minX + 4.2, S.minX + 4.9, 1.05, 1.3, S.minZ + 1.65, S.minZ + 2.05); // 쇠 금고(돈통)
+    B.box('steel', 'deco', S.minX + 4.25, S.minX + 4.85, 1.3, 1.32, S.minZ + 1.7, S.minZ + 2.0);
+    B.box('white', 'deco', S.minX + 5.3, S.minX + 5.7, 1.05, 1.08, S.minZ + 1.7, S.minZ + 2.0); // 전자계산기
+    B.box('lectern', 'deco', S.minX + 6.0, S.minX + 6.6, 1.05, 1.1, S.minZ + 1.7, S.minZ + 2.1); // 주판
+    for (let i = 0; i < 9; i++) B.geo('tv', 'deco', new THREE.SphereGeometry(0.02, 6, 5), S.minX + 6.05 + i * 0.065, 1.12, S.minZ + 1.9);
+    for (let i = 0; i < 3; i++) B.geo('glass', 'glass', new THREE.CylinderGeometry(0.09, 0.09, 0.2, 10), S.minX + 2.2 + i * 0.3, 1.15, S.minZ + 1.85); // 사탕 유리병
+    for (let i = 0; i < 3; i++) B.geo(['red', 'yellow', 'leaf2'][i], 'deco', new THREE.SphereGeometry(0.06, 8, 6), S.minX + 2.2 + i * 0.3, 1.12, S.minZ + 1.85);
+    B.box('steel', 'deco', S.maxX - 2.0, S.maxX - 1.6, 1.05, 1.35, S.minZ + 1.7, S.minZ + 2.0); // 나무젓가락통
+    for (let i = 0; i < 6; i++) B.geo('deskTop', 'deco', new THREE.CylinderGeometry(0.006, 0.006, 0.25, 4), S.maxX - 1.9 + (i % 3) * 0.08, 1.45, S.minZ + 1.78 + Math.floor(i / 3) * 0.12);
     block(0, S.minX, S.maxX, S.minZ, S.minZ + 2.2);
-    // 뒤쪽 진열장 (계산대 너머)
-    B.box('shelf', 'deco', S.minX + 0.5, S.maxX - 0.5, 0, 2.2, S.minZ + 0.2, S.minZ + 0.6);
-    // 왼쪽 과자 진열대
-    B.box('shelf', 'deco', S.minX + 0.2, S.minX + 0.7, 0, 2.0, S.minZ + 2.7, S.minZ + 7.5);
-    block(0, S.minX + 0.2, S.minX + 0.7, S.minZ + 2.7, S.minZ + 7.5);
-    const snackCols = ['red', 'yellow', 'blue', 'leaf2', 'ginkgo', 'books'];
+    // 뒤 선반: 라면 봉지·빵 상자·음료 캔 줄
+    B.box('shelf', 'deco', S.minX + 0.5, S.maxX - 0.5, 0, 2.3, S.minZ + 0.2, S.minZ + 0.6);
+    for (let r = 0; r < 4; r++) B.box('darkWood', 'deco', S.minX + 0.5, S.maxX - 0.5, 0.5 + r * 0.45, 0.53 + r * 0.45, S.minZ + 0.2, S.minZ + 0.62);
+    const snackCols = ['red', 'yellow', 'blue', 'leaf2', 'ginkgo', 'books', 'orangePaint', 'white'];
     let ci = 0;
-    for (let row = 0; row < 4; row++) {
-      for (let z = S.minZ + 2.85; z < S.minZ + 7.2; z += 0.42) {
-        const h = 0.22 + ((ci * 7) % 5) * 0.03;
-        const y = 0.15 + row * 0.48;
-        B.box(snackCols[ci++ % snackCols.length], 'deco', S.minX + 0.25, S.minX + 0.62, y, y + h, z, z + 0.32);
-        // 뒤쪽 진열장에도
-        const bx = S.minX + 0.8 + ((z - S.minZ - 2.85) / 0.42) * 0.85;
-        B.box(snackCols[(ci + 2) % snackCols.length], 'deco', bx, bx + 0.9, y, y + h, S.minZ + 0.25, S.minZ + 0.55);
+    for (let r = 0; r < 4; r++) {
+      const y = 0.55 + r * 0.45;
+      for (let x = S.minX + 0.6; x < S.maxX - 0.7; x += 0.36) {
+        const h = r === 3 ? 0.14 : 0.26 + ((ci * 7) % 4) * 0.03;
+        if (r === 3) B.geo(snackCols[ci % snackCols.length], 'deco', new THREE.CylinderGeometry(0.06, 0.06, 0.14, 10), x + 0.15, y + 0.07, S.minZ + 0.42); // 캔
+        else B.box(snackCols[ci % snackCols.length], 'deco', x, x + 0.3, y, y + h, S.minZ + 0.25, S.minZ + 0.55);
+        ci++;
       }
     }
-    // 아이스크림 냉동고
-    B.box('white', 'deco', S.maxX - 1.6, S.maxX - 0.25, 0, 0.9, S.minZ + 3, S.minZ + 5.6);
-    B.box('glass', 'glass', S.maxX - 1.55, S.maxX - 0.3, 0.9, 0.95, S.minZ + 3.05, S.minZ + 5.55);
-    block(0, S.maxX - 1.6, S.maxX - 0.25, S.minZ + 3, S.minZ + 5.6);
+    // 가운데 섬 진열대 (과자 봉지 매달린 철제 걸이 + 아래 바구니)
+    const ix = (S.minX + S.maxX) / 2;
+    for (const iz of [S.minZ + 4.2, S.minZ + 6.2]) {
+      B.box('cabinet', 'deco', ix - 1.4, ix + 1.4, 0, 0.9, iz - 0.4, iz + 0.4);
+      B.box('metal', 'deco', ix - 1.4, ix + 1.4, 0.9, 1.6, iz - 0.02, iz + 0.02);
+      for (let i = 0; i < 7; i++) for (const sgn of [-1, 1]) {
+        const bagMat = snackCols[(i * 3 + (sgn > 0 ? 1 : 0)) % snackCols.length];
+        B.box(bagMat, 'deco', ix - 1.25 + i * 0.4, ix - 1.0 + i * 0.4, 1.1, 1.5, iz + sgn * 0.03, iz + sgn * 0.12);
+      }
+      for (let i = 0; i < 6; i++) B.box(snackCols[(i + 4) % snackCols.length], 'deco', ix - 1.3 + i * 0.45, ix - 1.0 + i * 0.45, 0.9, 1.05, iz - 0.3, iz + 0.3);
+      block(0, ix - 1.5, ix + 1.5, iz - 0.5, iz + 0.5);
+    }
+    // 왼쪽 벽: 컵라면 선반 + 온수기
+    B.box('shelf', 'deco', S.minX + 0.2, S.minX + 0.7, 0, 2.0, S.minZ + 2.7, S.minZ + 6.0);
+    for (let r = 0; r < 3; r++) for (let z = S.minZ + 2.85; z < S.minZ + 5.8; z += 0.36) B.geo(['red', 'yellow', 'white'][r], 'deco', new THREE.CylinderGeometry(0.13, 0.1, 0.16, 10), S.minX + 0.45, 0.4 + r * 0.6, z + 0.15);
+    B.box('steel', 'deco', S.minX + 0.2, S.minX + 0.75, 0, 0.9, S.minZ + 6.3, S.minZ + 7.1); // 온수기
+    B.box('red', 'deco', S.minX + 0.5, S.minX + 0.6, 0.6, 0.7, S.minZ + 6.6, S.minZ + 6.8);
+    B.geo('steel', 'deco', new THREE.CylinderGeometry(0.015, 0.015, 0.12, 6).rotateX(Math.PI / 2), S.minX + 0.55, 0.45, S.minZ + 7.15);
+    const hot = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.2), new THREE.MeshBasicMaterial({ map: textTex(150, 60, '#ffffff', '#c0392b', ['뜨거운 물'], 30, '#c0392b') }));
+    hot.rotation.y = Math.PI / 2;
+    hot.position.set(S.minX + 0.76, 1.1, S.minZ + 6.7);
+    scene.add(hot);
+    block(0, S.minX + 0.2, S.minX + 0.8, S.minZ + 2.7, S.minZ + 7.2);
+    // 오른쪽 벽: 빨간 음료 냉장고(유리문) + 아이스크림 냉동고(유리 뚜껑)
+    B.box('red', 'deco', S.maxX - 1.0, S.maxX - 0.25, 0, 1.9, S.minZ + 2.7, S.minZ + 4.0);
+    B.box('glass', 'glass', S.maxX - 1.02, S.maxX - 1.0, 0.3, 1.8, S.minZ + 2.8, S.minZ + 3.9);
+    for (let r = 0; r < 4; r++) for (let i = 0; i < 4; i++) B.geo(['blue', 'orangePaint', 'white', 'leaf2'][(r + i) % 4], 'deco', new THREE.CylinderGeometry(0.045, 0.045, 0.12, 8), S.maxX - 0.6, 0.45 + r * 0.38, S.minZ + 2.95 + i * 0.26);
+    const colaSign = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.25), new THREE.MeshBasicMaterial({ map: textTex(210, 75, '#d9262a', '#ffffff', ['시원한 음료'], 30) }));
+    colaSign.rotation.y = -Math.PI / 2;
+    colaSign.position.set(S.maxX - 1.03, 1.95, S.minZ + 3.35);
+    scene.add(colaSign);
+    B.box('white', 'deco', S.maxX - 1.6, S.maxX - 0.25, 0, 0.9, S.minZ + 4.3, S.minZ + 6.6);
+    B.box('glass', 'glass', S.maxX - 1.55, S.maxX - 0.3, 0.9, 0.95, S.minZ + 4.35, S.minZ + 6.55);
+    B.box('blue', 'deco', S.maxX - 1.6, S.maxX - 0.25, 0.3, 0.55, S.minZ + 4.3, S.minZ + 4.31); // 아이스크림 광고 띠
+    const iceSign = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.22), new THREE.MeshBasicMaterial({ map: textTex(300, 66, '#2f6fb3', '#ffffff', ['아이스크림 · 쭈쭈바'], 30) }));
+    iceSign.rotation.y = -Math.PI / 2;
+    iceSign.position.set(S.maxX - 1.61, 0.42, S.minZ + 5.45);
+    scene.add(iceSign);
+    block(0, S.maxX - 1.6, S.maxX - 0.25, S.minZ + 2.7, S.minZ + 6.6);
+    // 천장: 백열등 2개 + 벽걸이 선풍기, 벽에 달력·외상 사절 종이·학교 소식지
+    for (const lx of [S.minX + 3, S.maxX - 3]) {
+      B.geo('tv', 'deco', new THREE.CylinderGeometry(0.01, 0.01, 0.5, 4), lx, H - 0.25, S.minZ + 4.5);
+      B.geo('lamp', 'deco', new THREE.SphereGeometry(0.09, 10, 8), lx, H - 0.55, S.minZ + 4.5);
+    }
+    B.geo('white', 'deco', new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16).rotateX(Math.PI / 2), S.minX + 1.2, 2.9, S.minZ + 0.35);
+    const cal = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7), new THREE.MeshBasicMaterial({ map: textTex(100, 140, '#ffffff', '#222222', ['2004', '5월', '', '1 2 3 4 5', '6 7 8 9 10', '…'], 16, '#c0392b') }));
+    cal.rotation.y = Math.PI / 2;
+    cal.position.set(S.minX + 0.21, 1.8, S.minZ + 1.2);
+    scene.add(cal);
+    const credit = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.3), new THREE.MeshBasicMaterial({ map: textTex(180, 90, '#fff8dc', '#c0392b', ['학생 외상', '절대 사절'], 28, '#c0392b') }));
+    credit.position.set(S.minX + 3.2, 2.0, S.minZ + 0.62);
+    scene.add(credit);
     const storeSign = new THREE.Mesh(
       new THREE.PlaneGeometry(2.4, 0.6),
       new THREE.MeshBasicMaterial({ map: textTex(400, 100, '#2f5aa8', '#ffffff', ['매  점'], 64) }),
