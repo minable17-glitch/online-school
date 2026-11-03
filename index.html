@@ -33,6 +33,7 @@
         <button class="pill" id="lookBtn" type="button">👕 꾸미기</button>
         <button class="pill" id="roomBtn" type="button">🔀 방 바꾸기</button>
         <button class="pill" id="placeBtn" type="button">📍 장소 이동</button>
+        <button class="pill" id="photoBtn" type="button">📷 사진 찍기</button>
       </div>
     </div>
 
@@ -54,6 +55,20 @@
         <p>뭐 먹을래? 골라 보렴~</p>
         <div class="menu" id="shopMenu"></div>
         <button type="button" class="close" id="shopClose">닫기</button>
+      </div>
+    </div>
+
+    <!-- 사진 찍기 -->
+    <div class="photo-flash hidden" id="photoFlash"></div>
+    <div class="sheet hidden" id="photoSheet">
+      <div class="sheet-card photo-card">
+        <img id="photoImg" alt="찍은 사진" />
+        <div class="photo-actions">
+          <button type="button" id="photoSave" class="photo-main">💾 저장 / 공유</button>
+          <button type="button" id="photoSelfie">🤳 셀카</button>
+          <button type="button" id="photoAgain">📷 다시</button>
+        </div>
+        <button type="button" class="close" id="photoClose">닫기</button>
       </div>
     </div>
 

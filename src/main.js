@@ -1502,3 +1502,110 @@ if ('serviceWorker' in navigator && !DEBUG && location.hostname !== 'localhost')
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   if (ios && !standalone) iosTip.classList.remove('hidden');
 }
+
+// ── 📷 사진 찍기: 지금 화면(또는 셀카)을 찍어 2000년대 디카 느낌 날짜 + 학교 이름을 넣고 저장·공유 ──
+{
+  const sheet = document.getElementById('photoSheet');
+  const img = document.getElementById('photoImg');
+  const flash = document.getElementById('photoFlash');
+  let lastBlob = null;
+  let selfieMode = false;
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  async function shoot(selfie) {
+    unlockAudio();
+    sheet.classList.add('hidden');
+    document.body.classList.add('shooting');
+    const saved = { yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist };
+    if (selfie) {
+      // 내 얼굴 쪽으로 카메라 돌리고 브이(손 들기)
+      cam.yaw = me.root.rotation.y;
+      cam.pitch = 0.12;
+      cam.dist = 2.4;
+      me.target = null;
+      me.path = [];
+      me.play('hand');
+      await new Promise((r) => setTimeout(r, 650));
+      await nextFrame();
+    } else {
+      await nextFrame();
+    }
+    // 화면을 한 번 그린 직후 바로 읽기 (preserveDrawingBuffer 없이도 됨)
+    renderer.render(scene, camera);
+    const src = renderer.domElement;
+    const W = src.width;
+    const H = src.height;
+    const pad = Math.round(Math.min(W, H) * 0.04);
+    const bottom = Math.round(Math.min(W, H) * 0.14);
+    const c = document.createElement('canvas');
+    c.width = W + pad * 2;
+    c.height = H + pad + bottom;
+    const g = c.getContext('2d');
+    // 폴라로이드 느낌 흰 테두리
+    g.fillStyle = '#fbfaf5';
+    g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(src, pad, pad, W, H);
+    // 옛날 디카 주황 날짜
+    const d = new Date();
+    const stamp = `'${String(d.getFullYear()).slice(2)} ${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}`;
+    const fs = Math.round(Math.min(W, H) * 0.05);
+    g.font = `700 ${fs}px 'Courier New', monospace`;
+    g.textAlign = 'right';
+    g.textBaseline = 'bottom';
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.fillText(stamp, pad + W - fs * 0.6 + 2, pad + H - fs * 0.5 + 2);
+    g.fillStyle = '#ff9a2e';
+    g.fillText(stamp, pad + W - fs * 0.6, pad + H - fs * 0.5);
+    // 아래 글씨: 학교 이름 · 장소 · 내 이름
+    const fs2 = Math.round(bottom * 0.3);
+    g.textAlign = 'left';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#2b2b2b';
+    g.font = `700 ${fs2}px 'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif`;
+    g.fillText(`🏫 온라인 학교 · ${whereText || room}`, pad, H + pad + bottom * 0.38);
+    g.fillStyle = '#888';
+    g.font = `500 ${Math.round(fs2 * 0.75)}px 'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif`;
+    g.fillText(`${myName} · ${schoolNow().text}`, pad, H + pad + bottom * 0.72);
+    // 찰칵
+    flash.classList.remove('hidden');
+    flash.style.animation = 'none';
+    void flash.offsetWidth;
+    flash.style.animation = '';
+    setTimeout(() => flash.classList.add('hidden'), 450);
+    ambience?.ding?.();
+    document.body.classList.remove('shooting');
+    if (selfie) Object.assign(cam, saved);
+    lastBlob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+    if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+    img.src = URL.createObjectURL(lastBlob);
+    selfieMode = selfie;
+    document.getElementById('photoSelfie').textContent = selfie ? '🖼️ 풍경' : '🤳 셀카';
+    sheet.classList.remove('hidden');
+  }
+  document.getElementById('photoBtn').addEventListener('click', () => shoot(false));
+  document.getElementById('photoAgain').addEventListener('click', () => shoot(selfieMode));
+  document.getElementById('photoSelfie').addEventListener('click', () => shoot(!selfieMode));
+  document.getElementById('photoClose').addEventListener('click', () => sheet.classList.add('hidden'));
+  document.getElementById('photoSave').addEventListener('click', async () => {
+    if (!lastBlob) return;
+    const d = new Date();
+    const name = `온라인학교_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}.jpg`;
+    const file = new File([lastBlob], name, { type: 'image/jpeg' });
+    // 휴대폰: 공유 창(카톡·갤러리 저장 등), PC: 바로 내려받기
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: '온라인 학교', text: '🏫 온라인 학교에서 찍은 사진' });
+        return;
+      } catch (e) {
+        if (e?.name === 'AbortError') return;
+      }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(lastBlob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    hint('사진을 저장했어요 📷', 1800);
+  });
+}

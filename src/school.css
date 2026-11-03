@@ -575,3 +575,13 @@ button { font: inherit; cursor: pointer; }
 /* ── 앱 설치 ── */
 .install-btn { width: 100%; margin-top: 8px; border: 2px solid #3f7e4e; background: #fff; color: #3f7e4e; border-radius: 14px; padding: 12px; font-size: 15px; font-weight: 700; }
 .install-tip { font-size: 12.5px; color: #555; margin: 8px 0 0; text-align: center; }
+
+/* ── 사진 찍기 ── */
+.photo-flash { position: fixed; inset: 0; background: #fff; z-index: 40; pointer-events: none; animation: photoFlash 0.45s ease-out forwards; }
+@keyframes photoFlash { from { opacity: 0.95; } to { opacity: 0; } }
+.photo-card { text-align: center; }
+.photo-card img { width: 100%; max-height: 52vh; object-fit: contain; border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); transform: rotate(-1.2deg); }
+.photo-actions { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+.photo-actions button { border: 0; border-radius: 12px; padding: 12px 6px; font-size: 14.5px; font-weight: 600; background: #e9e1cf; color: #333; }
+.photo-actions .photo-main { background: #3f7e4e; color: #fff; }
+body.shooting .top, body.shooting .actions, body.shooting .shop-btn, body.shooting .sit-btn, body.shooting .stair-bar, body.shooting .hint, body.shooting .game-hud, body.shooting .bibim-pill { visibility: hidden; }
