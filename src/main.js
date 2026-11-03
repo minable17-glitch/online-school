@@ -1475,3 +1475,30 @@ frame();
 
 // 자동 점검용 (주소에 debug=1 이 있을 때만)
 if (params.get('debug') === '1') window.__school = { me, walkTo, world, nav, others, soccer, npc, cam, teachers, hall, games };
+
+// ── PWA: 앱처럼 설치 + 오프라인 저장 ──
+if ('serviceWorker' in navigator && !DEBUG && location.hostname !== 'localhost') {
+  window.addEventListener('load', () => navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {}));
+}
+{
+  const installBtn = document.getElementById('installBtn');
+  const iosTip = document.getElementById('iosTip');
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches || navigator.standalone;
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferred = e;
+    if (!standalone) installBtn.classList.remove('hidden');
+  });
+  installBtn.addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice.catch(() => null);
+    deferred = null;
+    installBtn.classList.add('hidden');
+  });
+  window.addEventListener('appinstalled', () => installBtn.classList.add('hidden'));
+  // 아이폰 사파리는 설치 버튼 대신 안내
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (ios && !standalone) iosTip.classList.remove('hidden');
+}

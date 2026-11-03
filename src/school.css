@@ -571,3 +571,7 @@ button { font: inherit; cursor: pointer; }
 .place-grid button span { font-size: 20px; }
 .place-grid button:active { background: #f3ead6; }
 .place-grid button.here { background: #fff5dc; border-color: #d67828; }
+
+/* ── 앱 설치 ── */
+.install-btn { width: 100%; margin-top: 8px; border: 2px solid #3f7e4e; background: #fff; color: #3f7e4e; border-radius: 14px; padding: 12px; font-size: 15px; font-weight: 700; }
+.install-tip { font-size: 12.5px; color: #555; margin: 8px 0 0; text-align: center; }
