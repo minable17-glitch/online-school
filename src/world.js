@@ -1993,22 +1993,44 @@ export function buildWorld(scene, { menu = [] } = {}) {
       const X = (from, d) => from + dir * d; // 바깥 벽에서 안쪽으로 d 만큼
       const span = (a, b) => [Math.min(a, b), Math.max(a, b)];
 
-      // 바닥·벽·천장(위층 바닥) ──
+      // 바닥·벽·천장(위층 바닥) ── 바깥은 본관과 같은 모습: 아래 벽돌 띠 + 크림색 + 작은 창
       B.box('tileCheck', 'floor', ix1, ix2, yb, L + 0.01, z1, z2);
-      B.box('cream', 'wall', ...span(outer, outer + dir * WALL_T), yb, L + LEVEL_H - 0.2, TOILET.z1, z2);
-      B.box('cream', 'wall', ...span(inner, inner - dir * WALL_T), yb, L + LEVEL_H - 0.2, TOILET.z1, z2);
-      B.box('cream', 'wall', ...span(outer, inner), yb, L + 2.0, TOILET.z1, z1); // 뒤벽 아래
-      B.box('cream', 'wall', ...span(outer, inner), L + 2.6, L + LEVEL_H - 0.2, TOILET.z1, z1); // 뒤벽 위
+      const [ox1, ox2] = span(outer, outer + dir * WALL_T); // 바깥 옆벽
+      const [nx1, nx2] = span(inner, inner - dir * WALL_T); // 안쪽 옆벽 (복도 가운데 쪽, 바깥에서도 보임)
+      for (const [wx1, wx2] of [[ox1, ox2], [nx1, nx2]]) {
+        B.box('band', 'wall', wx1, wx2, yb, L + 0.9, TOILET.z1, z2);
+        B.box('cream', 'wall', wx1, wx2, L + 0.9, L + LEVEL_H - 0.2, TOILET.z1, z2);
+      }
+      // 옆벽 작은 간유리 창 2개 (높이 2.0~2.6)
+      for (const [wx1, wx2] of [[ox1, ox2]]) for (const cz of [z1 + 1.2, z1 + 3.4]) {
+        B.box('glass', 'glass', wx1 - 0.01, wx2 + 0.01, L + 2.0, L + 2.6, cz - 0.5, cz + 0.5);
+        B.box('frame', 'deco', wx1 - 0.03, wx2 + 0.03, L + 2.0, L + 2.06, cz - 0.55, cz + 0.55);
+        B.box('frame', 'deco', wx1 - 0.03, wx2 + 0.03, L + 2.54, L + 2.6, cz - 0.55, cz + 0.55);
+        B.box('frame', 'deco', wx1 - 0.03, wx2 + 0.03, L + 2.0, L + 2.6, cz - 0.55, cz - 0.49);
+        B.box('frame', 'deco', wx1 - 0.03, wx2 + 0.03, L + 2.0, L + 2.6, cz + 0.49, cz + 0.55);
+      }
+      // 뒤벽: 아래 벽돌 띠, 가운데 크림, 위 간유리 띠창
+      B.box('band', 'wall', ...span(outer, inner), yb, L + 0.9, TOILET.z1, z1);
+      B.box('cream', 'wall', ...span(outer, inner), L + 0.9, L + 2.0, TOILET.z1, z1);
+      B.box('cream', 'wall', ...span(outer, inner), L + 2.6, L + LEVEL_H - 0.2, TOILET.z1, z1);
       B.box('cream', 'wall', ...span(outer, X(outer, 0.5)), L + 2.0, L + 2.6, TOILET.z1, z1);
       B.box('cream', 'wall', ...span(inner, X(inner, -0.5)), L + 2.0, L + 2.6, TOILET.z1, z1);
-      B.box('glass', 'glass', ix1 + 0.5, ix2 - 0.5, L + 2.0, L + 2.6, TOILET.z1 + 0.06, z1 - 0.06); // 뒤쪽 간유리 띠창
+      B.box('glass', 'glass', ix1 + 0.5, ix2 - 0.5, L + 2.0, L + 2.6, TOILET.z1 + 0.06, z1 - 0.06);
       for (let i = 0; i <= 4; i++) {
         const wx = ix1 + 0.5 + ((ix2 - ix1 - 1.0) * i) / 4;
         B.box('frame', 'deco', wx - 0.03, wx + 0.03, L + 2.0, L + 2.6, TOILET.z1 - 0.02, z1 + 0.02);
       }
+      B.box('frame', 'deco', ix1 + 0.5, ix2 - 0.5, L + 2.0, L + 2.06, TOILET.z1 - 0.02, z1 + 0.02);
+      B.box('frame', 'deco', ix1 + 0.5, ix2 - 0.5, L + 2.54, L + 2.6, TOILET.z1 - 0.02, z1 + 0.02);
+      // 층 사이 바닥 두께 (바깥에서 띠처럼 보임) / 꼭대기는 본관 옥상과 같은 초록 방수 지붕 + 낮은 난간
       if (k === LEVELS - 1) {
-        B.box('roof', 'wall', Math.min(outer, inner) - 0.2, Math.max(outer, inner) + 0.2, L + LEVEL_H - 0.2, L + LEVEL_H, TOILET.z1 - 0.2, z2);
-        block(ROOF, Math.min(outer, inner) - 0.5, Math.max(outer, inner) + 0.5, TOILET.z1 - 1, z2);
+        const rx1 = Math.min(outer, inner);
+        const rx2 = Math.max(outer, inner);
+        B.box('roof', 'floor', rx1, rx2, L + LEVEL_H - 0.2, L + LEVEL_H, TOILET.z1, z2);
+        B.box('cream', 'wall', rx1, rx2, L + LEVEL_H, L + LEVEL_H + 0.5, TOILET.z1, TOILET.z1 + 0.25);
+        B.box('cream', 'wall', ox1, ox2 + (dir > 0 ? 0.05 : 0) - (dir < 0 ? 0.05 : 0), L + LEVEL_H, L + LEVEL_H + 0.5, TOILET.z1, z2);
+        B.box('cream', 'wall', nx1, nx2, L + LEVEL_H, L + LEVEL_H + 0.5, TOILET.z1, z2);
+        block(ROOF, rx1 - 0.5, rx2 + 0.5, TOILET.z1 - 1, z2);
       } else B.box('cream', 'wall', ...span(outer, inner), L + LEVEL_H - 0.2, L + LEVEL_H, TOILET.z1, z2);
       // 벽 타일: 베이지 전체 + 허리 높이 초록 띠 (네 벽)
       const tileWall = (x1, x2, zz1, zz2) => {
