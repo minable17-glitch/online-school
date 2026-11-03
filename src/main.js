@@ -17,6 +17,7 @@ import { connectRoom } from './net.js';
 import { playSchoolBell, playClap, playPop, unlockAudio, playPianoNote } from './audio.js';
 import { createActivities } from './activities.js';
 import { createGames } from './games.js';
+import { createHall } from './hall.js';
 import { createAmbience } from './ambience.js';
 
 const params = new URLSearchParams(location.search);
@@ -142,8 +143,11 @@ const activities = createActivities({
   onNote: (n) => net.send('act', { type: 'note', n }),
   onAct: (kind, score) => net.send('act', { type: kind, score }),
 });
+// 명예의 전당 (놀이 기록, 친구들과 합침)
+const hall = createHall({ scene, store, send: (e, p) => net.send(e, p), myId, myName: () => myName });
 // 운동장·교문·보물·닭장 놀이
 const games = createGames({
+  hall,
   scene,
   me,
   world,
@@ -358,6 +362,7 @@ const announce = () => {
   net.send('state', myState());
   // 마지막으로 공을 찬 사람이 새로 온 친구에게 공 위치·점수를 알려줌
   if (soccer.iKickedLast) net.send('ball', soccer.snapshot());
+  hall?.share();
 };
 
 function getOther(id, name, teacher, look) {
@@ -403,6 +408,8 @@ function distVolume(avatar) {
 
 function onAction(a) {
   if (!a?.id || a.id === myId) return;
+  // 명예의 전당 판은 친구 상태보다 먼저 올 수 있으니 바로 합침
+  if (a.type === 'hall' || a.type === 'hallAll') return hall.receive(a);
   const o = others.get(a.id);
   if (!o) return;
   o.lastSeen = performance.now();
@@ -1256,4 +1263,4 @@ cam.focus.set(me.pos.x, me.pos.y + 1.3 * AVATAR_SCALE, me.pos.z);
 frame();
 
 // 자동 점검용 (주소에 debug=1 이 있을 때만)
-if (params.get('debug') === '1') window.__school = { me, walkTo, world, nav, others, soccer, npc, cam, teachers };
+if (params.get('debug') === '1') window.__school = { me, walkTo, world, nav, others, soccer, npc, cam, teachers, hall, games };

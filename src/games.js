@@ -20,7 +20,7 @@ const el = (tag, cls, html) => {
 };
 const mmss = (sec) => `${Math.floor(sec / 60)}:${String((sec % 60).toFixed(2)).padStart(5, '0')}`;
 
-export function createGames({ scene, me, world, store, hint, getAmbience, onAct, isTeacher }) {
+export function createGames({ scene, me, world, store, hint, getAmbience, onAct, isTeacher, hall }) {
   const ambience = { ding: () => getAmbience()?.ding?.(), rimHit: (v) => getAmbience()?.rimHit?.(v) };
   // ── 공통 HUD: 진행 중 게임 pill + 그만두기 ──
   const hud = el('div', 'game-hud hidden');
@@ -78,6 +78,11 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
   });
 
   const best = (k) => Number(store.get(`school.best.${k}`)) || 0;
+  const hallLine = (k, v) => {
+    const r = hall?.record?.(k, v);
+    if (!r || !r.rank) return '명예의 전당 10위 밖이에요. 다시 도전!';
+    return `🏆 명예의 전당 <b>${r.rank}위</b>${r.improved ? ' (올라갔어요!)' : ''}`;
+  };
   const setBest = (k, v) => store.set(`school.best.${k}`, String(v));
 
   // 결과 시트
@@ -158,7 +163,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
             if (rec) setBest('run', t);
             me.say(rec ? '신기록이다! 🏃' : '휴, 다 뛰었다~');
             onAct?.('run', Math.round(t * 100) / 100);
-            showResult('달리기 완주!', [`기록 <b>${mmss(t)}</b>`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${mmss(b)}`], '🏃');
+            showResult('달리기 완주!', [`기록 <b>${mmss(t)}</b>`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${mmss(b)}`, hallLine('run', Math.round(t * 100) / 100)], '🏃');
             stopGame();
             return;
           }
@@ -255,7 +260,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
             if (rec) setBest('jump', m);
             me.say(rec ? `${m}m! 신기록!` : `${m}m 뛰었다~`);
             onAct?.('jump', m);
-            showResult('멀리뛰기', [`<b>${m} m</b>`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${b} m`], '🦘');
+            showResult('멀리뛰기', [`<b>${m} m</b>`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${b} m`, hallLine('jump', m)], '🦘');
             stopGame();
           }
         }
@@ -368,7 +373,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
           if (rec) setBest('sneak', score);
           me.say('무사히 들어왔다! 😎');
           onAct?.('sneak', score);
-          showResult('몰래 들어가기 성공!', [`걸린 시간 ${mmss(t)} · 들킨 횟수 ${caught}번`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`], '🕵️');
+          showResult('몰래 들어가기 성공!', [`걸린 시간 ${mmss(t)} · 들킨 횟수 ${caught}번`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`, hallLine('sneak', score)], '🕵️');
           stopGame();
           return;
         }
@@ -638,7 +643,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
           it.say('휴, 그만하자~');
           me.say(frozen ? '아슬아슬했다!' : '한 번도 안 잡혔다! 😎');
           onAct?.('tag', score);
-          showResult('얼음땡 끝!', [`잡힌 횟수 ${frozen}번 · 아슬아슬 피하기 ${dodges.toFixed(0)}초`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`], '🧊');
+          showResult('얼음땡 끝!', [`잡힌 횟수 ${frozen}번 · 아슬아슬 피하기 ${dodges.toFixed(0)}초`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`, hallLine('tag', score)], '🧊');
           stopGame();
         }
       },
@@ -740,7 +745,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
           if (rec) setBest('dodge', score);
           me.say(hits >= 5 ? '아웃… 다음엔 꼭!' : '살아남았다! 🏐');
           onAct?.('dodge', score);
-          showResult(hits >= 5 ? '아웃!' : '피구 끝!', [`피한 공 ${dodged}개 · 맞은 공 ${hits}개`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`], hits >= 5 ? '💥' : '🏐');
+          showResult(hits >= 5 ? '아웃!' : '피구 끝!', [`피한 공 ${dodged}개 · 맞은 공 ${hits}개`, `점수 <b>${score}</b>${rec ? ' 🏅 신기록' : ` (최고 ${b})`}`, hallLine('dodge', score)], hits >= 5 ? '💥' : '🏐');
           stopGame();
         }
       },
@@ -766,6 +771,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
       if (nearJump()) g.push({ icon: '🦘', name: '멀리뛰기', desc: `타이밍 맞춰 점프${best('jump') ? ` · 최고 ${best('jump')}m` : ''}`, start: startJump });
     }
     if (nearGateIn() || me.pos.x > OUT.wall) g.push({ icon: '🕵️', name: '몰래 들어가기', desc: `선도부 시야 피해 현관까지${best('sneak') ? ` · 최고 ${best('sneak')}점` : ''}`, start: startSneak });
+    if (hall?.nearBoard(me.pos)) g.push({ icon: '🏆', name: '명예의 전당', desc: '친구들 최고 기록 보기', start: () => hall.open('run') });
     g.push({ icon: '🗺️', name: '보물찾기 힌트', desc: `오늘의 쪽지 ${ensureTreasure().found.size}/3`, start: startTreasure });
     if (onRoof() && nearCoop()) {
       g.push({ icon: '🌾', name: '모이 주기', desc: '옥상 닭장 병아리에게', start: feedCoop });
@@ -787,7 +793,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
         tickCoop();
         const canPlay = !active && !isTeacher && available().length > 0;
         playBtn.classList.toggle('hidden', !canPlay);
-        if (canPlay) playBtn.textContent = onRoof() && nearCoop() ? '🐤 닭장' : nearGateIn() || me.pos.x > OUT.wall ? '🕵️ 놀이하기' : onField() ? '🎲 운동장 놀이' : '🗺️ 보물찾기';
+        if (canPlay) playBtn.textContent = hall?.nearBoard(me.pos) ? '🏆 명예의 전당' : onRoof() && nearCoop() ? '🐤 닭장' : nearGateIn() || me.pos.x > OUT.wall ? '🕵️ 놀이하기' : onField() ? '🎲 운동장 놀이' : '🗺️ 보물찾기';
       }
       // 닭 꼬물거림
       const now = performance.now() / 1000;

@@ -430,3 +430,26 @@ button { font: inherit; cursor: pointer; }
 }
 .jump-bar.show { display: block; }
 .jump-fill { height: 100%; width: 0; background: #e8584f; transition: none; }
+
+/* ── 명예의 전당 ── */
+.hall-card { max-height: 70vh; overflow-y: auto; }
+.hall-card .chips { justify-content: center; margin-bottom: 10px; }
+.hall-body { min-height: 120px; }
+.hall-list { list-style: none; margin: 0; padding: 0; counter-reset: rank; text-align: left; }
+.hall-list li {
+  counter-increment: rank;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #efe6d2;
+  font-size: 15px;
+}
+.hall-list li::before { content: counter(rank); width: 26px; height: 26px; border-radius: 50%; background: #e9e1cf; color: #555; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
+.hall-list li:nth-child(1)::before { background: #f2c230; color: #5a3d00; }
+.hall-list li:nth-child(2)::before { background: #cfd3d8; color: #333; }
+.hall-list li:nth-child(3)::before { background: #d9955a; color: #fff; }
+.hall-list li.me { background: #fff5dc; }
+.hall-list .hn { flex: 1; font-weight: 600; color: #222; }
+.hall-list .hv { color: #d67828; font-weight: 700; }
+.hall-empty { color: #777; font-size: 14px; }
