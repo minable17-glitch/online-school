@@ -1151,6 +1151,8 @@ function start() {
     onStatus(s) {
       netStatus = s;
       renderRoomLabel();
+      if (s === 'full') hint('지금 접속한 친구가 너무 많아서 혼자 모드예요. 잠시 후 다시 들어와 보세요', 5000);
+      else if (s === 'offline') hint('서버 연결이 끊겨서 혼자 모드예요. 새로고침하면 다시 연결돼요', 5000);
     },
     onInstance(n) {
       instanceNo = n;

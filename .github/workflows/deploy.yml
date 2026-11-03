@@ -28,11 +28,11 @@ jobs:
       - run: npm run build
         env:
           GH_PAGES: "1"
-          # 친구들과 함께 보이게 하는 서버(온라인 학교 전용 Supabase 프로젝트).
-          # 저장소 Settings → Secrets and variables → Actions → Variables 에 넣으면 사용됨.
-          # 비어 있으면 혼자 모드로 동작.
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # 친구들과 함께 보이게 하는 서버(온라인 학교 전용 Supabase 프로젝트, 서울 리전).
+          # publishable 키는 브라우저에 공개되는 키라 여기 적어도 괜찮음 (secret 키는 절대 X).
+          # 저장소 Variables 에 같은 이름으로 넣으면 그 값이 우선.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://omprksdzpjcotpjzmvog.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'sb_publishable_krztfipB3N6dfSJ7lG87Gw_xCPy-9UF' }}
       - uses: actions/configure-pages@v5
         with:
           enablement: true
