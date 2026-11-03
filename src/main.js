@@ -16,6 +16,7 @@ import { createNavigator } from './pathfind.js';
 import { connectRoom } from './net.js';
 import { playSchoolBell, playClap, playPop, unlockAudio, playPianoNote } from './audio.js';
 import { createActivities } from './activities.js';
+import { createGames } from './games.js';
 import { createAmbience } from './ambience.js';
 
 const params = new URLSearchParams(location.search);
@@ -140,6 +141,17 @@ const activities = createActivities({
   world,
   onNote: (n) => net.send('act', { type: 'note', n }),
   onAct: (kind, score) => net.send('act', { type: kind, score }),
+});
+// 운동장·교문·보물·닭장 놀이
+const games = createGames({
+  scene,
+  me,
+  world,
+  store,
+  hint,
+  getAmbience: () => ambience,
+  onAct: (kind, score) => net.send('act', { type: 'game2', kind, score }),
+  isTeacher,
 });
 
 // ── 매점 아주머니 ──
@@ -422,6 +434,9 @@ function onAction(a) {
   } else if (a.type === 'art') {
     o.avatar.showEmoji('🎨', 8);
     o.avatar.say('그림 완성!');
+  } else if (a.type === 'game2') {
+    const names = { run: '운동장 한 바퀴', jump: '멀리뛰기', sneak: '몰래 들어가기', treasure: '보물찾기', tag: '얼음땡', dodge: '피구' };
+    o.avatar.say(`${names[a.kind] || '놀이'} ${a.kind === 'run' ? `${a.score}초` : a.kind === 'jump' ? `${a.score}m` : a.kind === 'treasure' ? '다 찾음!' : `${a.score | 0}점`}!`);
   } else if (a.type === 'game') {
     o.avatar.say(`블록 쌓기 ${a.score | 0}점!`);
   } else if (['hand', 'bow', 'clap'].includes(a.type)) {
@@ -612,6 +627,7 @@ vendorBtn.addEventListener('click', () => {
   lastTreat = performance.now();
   let i = vendorNear.spec.treat;
   if (i === 2 && Math.random() < 0.45) i = 3; // 뽑기는 깨질 때도 있음
+  if (i === 0 && !games.addChick()) return; // 병아리는 옥상 닭장으로
   me.showEmoji(TREATS[i].emoji, 20);
   me.say(TREATS[i].say);
   ambience?.ding();
@@ -884,7 +900,10 @@ SNACKS.forEach(([emoji, name], i) => {
     ambience?.ding();
     me.showEmoji(emoji, 15);
     me.say(`${name} 냠냠!`);
-    npc.say(['고마워~ 또 와!', '맛있게 먹어~', '흘리지 말고~'][i % 3]);
+    if (games.hasCoupon()) {
+      games.useCoupon();
+      npc.say('보물 다 찾았다며? 이건 공짜야~ 🎁');
+    } else npc.say(['고마워~ 또 와!', '맛있게 먹어~', '흘리지 말고~'][i % 3]);
     net.send('act', { type: 'eat', item: i });
   });
   shopMenu.appendChild(btn);
@@ -1202,6 +1221,7 @@ function frame() {
   stepSounds();
   events.update(dt, me, camera.position);
   activities.update(dt);
+  games.update(dt);
   teachers.update(dt, me, roomAt(me.pos.x, me.pos.z, me.pos.y)?.id, camera.position);
   soccer.update(dt, me, !!me.target);
   world.update(clock.elapsedTime);

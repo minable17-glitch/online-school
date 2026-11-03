@@ -162,7 +162,7 @@ const speckle = (base, colors, n, seed, sz = 3) => (g, w, h) => {
 
 const FONT = "'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif";
 
-function textTex(w, h, bg, fg, lines, size, border) {
+export function textTex(w, h, bg, fg, lines, size, border) {
   return canvasTex(
     w,
     h,
@@ -789,6 +789,24 @@ export function buildWorld(scene, { menu = [] } = {}) {
       B.box('white', 'deco', x - 0.5, x + 0.5, y, y + 0.7, -11.6, -11.0);
       B.geo('metal', 'deco', new THREE.CylinderGeometry(0.22, 0.22, 0.04, 16), x, y + 0.45, -10.99);
       block(ROOF, x - 0.5, x + 0.5, -11.6, -11.0);
+    }
+    // 옥상 닭장 (나무 틀 + 철망 + 함석 지붕 + 모이통·물통)
+    {
+      const cx = 30;
+      const cz = -6;
+      B.box('lectern', 'deco', cx - 2, cx + 2, y, y + 0.08, cz - 1.2, cz + 1.2);
+      for (const [px, pz] of [[-2, -1.2], [2, -1.2], [-2, 1.2], [2, 1.2]]) B.box('lectern', 'deco', cx + px - 0.05, cx + px + 0.05, y, y + 1.3, cz + pz - 0.05, cz + pz + 0.05);
+      B.box('fence', 'deco', cx - 2, cx + 2, y + 0.08, y + 1.3, cz - 1.21, cz - 1.19);
+      B.box('fence', 'deco', cx - 2, cx + 2, y + 0.08, y + 1.3, cz + 1.19, cz + 1.21);
+      B.box('fence', 'deco', cx - 2.01, cx - 1.99, y + 0.08, y + 1.3, cz - 1.2, cz + 1.2);
+      B.box('fence', 'deco', cx + 1.99, cx + 2.01, y + 0.08, y + 1.3, cz - 1.2, cz + 1.2);
+      const rg = new THREE.BoxGeometry(4.4, 0.04, 2.8);
+      rg.rotateX(0.15);
+      B.geo('metal', 'deco', rg, cx, y + 1.42, cz);
+      B.box('yellow', 'deco', cx - 1.7, cx - 1.2, y + 0.08, y + 0.2, cz + 0.7, cz + 1.0); // 모이통
+      B.box('blue', 'deco', cx + 1.2, cx + 1.7, y + 0.08, y + 0.2, cz + 0.7, cz + 1.0); // 물통
+      B.box('cork', 'deco', cx - 1.9, cx + 1.9, y + 0.08, y + 0.1, cz - 1.1, cz + 1.1); // 짚
+      block(ROOF, cx - 2.1, cx + 2.1, cz - 1.3, cz + 1.3);
     }
     for (const bx of [-8, 8]) {
       B.box('chair', 'deco', bx - 1.1, bx + 1.1, y + 0.45, y + 0.5, -2.2, -1.6);

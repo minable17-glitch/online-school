@@ -98,24 +98,6 @@ export function createEvents({ scene }) {
       props.set(spec.id, g);
     }
   }
-  function despawn(id) {
-    const n = npcs.get(id);
-    if (n) {
-      n.avatar.dispose();
-      npcs.delete(id);
-    }
-    const g = props.get(id);
-    if (g) {
-      scene.remove(g);
-      g.traverse((o) => {
-        if (o.isMesh) {
-          o.geometry.dispose();
-          o.material.dispose();
-        }
-      });
-      props.delete(id);
-    }
-  }
 
   let kind = null;
   // 0.3초마다

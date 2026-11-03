@@ -439,7 +439,7 @@ export class Avatar {
           this.onArrive?.();
         }
       } else {
-        const step = Math.min(dist, 4 * dt);
+        const step = this.frozen ? 0 : Math.min(dist, 4 * (this.speedMul || 1) * dt);
         this.pos.x += (dx / dist) * step;
         this.pos.z += (dz / dist) * step;
         this.faceAngle(Math.atan2(dx, dz), dt);
@@ -452,6 +452,7 @@ export class Avatar {
     const onStair = this.target?.stair;
     this.pos.y = onStair ? groundY : this.pos.y + (groundY - this.pos.y) * Math.min(1, dt * 12);
     r.position.copy(this.pos);
+    if (this.jumpY) r.position.y += this.jumpY;
     if (this.sitChair) this.faceAngle(this.sitChair.ry, dt);
 
     // 걷는 동작
