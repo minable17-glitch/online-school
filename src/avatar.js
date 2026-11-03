@@ -456,8 +456,9 @@ export class Avatar {
     if (this.sitChair) this.faceAngle(this.sitChair.ry, dt);
 
     // 걷는 동작
+    if (this.forceMove) moving = true; // 놀이가 직접 위치를 움직일 때도 뛰는 동작
     this.speed += ((moving ? 1 : 0) - this.speed) * Math.min(1, dt * 8);
-    this.walkPhase += dt * 9 * this.speed;
+    this.walkPhase += dt * 9 * this.speed * (this.runSpeed ? 0.6 + this.runSpeed : 1);
     const swing = Math.sin(this.walkPhase) * 0.6 * this.speed;
     let legL = swing;
     let legR = -swing;

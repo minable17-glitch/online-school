@@ -116,62 +116,112 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
   // ════════════════════════════════════════════════
   // 🏃 운동장 달리기 (트랙 한 바퀴)
   // ════════════════════════════════════════════════
-  const TRACK = [
-    { x: 0, z: PITCH.minZ + 3 },
-    { x: PITCH.maxX - 6, z: (PITCH.minZ + PITCH.maxZ) / 2 },
-    { x: 0, z: PITCH.maxZ - 3 },
-    { x: PITCH.minX + 6, z: (PITCH.minZ + PITCH.maxZ) / 2 },
-  ];
+  // 트랙(타원) 위 각도 a → 좌표. 출발선(a=0)은 앞쪽 가운데, 시계 반대 방향으로 한 바퀴
+  const CX = 0;
+  const CZ = (PITCH.minZ + PITCH.maxZ) / 2;
+  const RX = PITCH.maxX - 8;
+  const RZ = (PITCH.maxZ - PITCH.minZ) / 2 - 3;
+  const trackAt = (a) => ({ x: CX + Math.sin(a) * RX, z: CZ - Math.cos(a) * RZ });
   function startRun() {
     const flags = [];
-    let next = 1;
-    let t = 0;
-    let countdownStart = 0;
-    let started = false;
-    const start = TRACK[0];
+    const start = trackAt(0);
     const startPos = () => Math.hypot(me.pos.x - start.x, me.pos.z - start.z) < 2.5;
     flags.push(makeFlag(start.x, FIELD_Y, start.z, '#2fd36b'));
-    for (let i = 1; i < TRACK.length; i++) flags.push(makeFlag(TRACK[i].x, FIELD_Y, TRACK[i].z));
-    hint('초록 깃발에서 출발해요! 빨간 깃발을 차례로 돌고 돌아오기', 3000);
-    me.speedMul = 1.35; // 달리기 중엔 빠르게
+    for (let q = 1; q < 4; q++) {
+      const pt = trackAt((q * Math.PI) / 2);
+      flags.push(makeFlag(pt.x, FIELD_Y, pt.z));
+    }
+    let phase = 'go'; // go → count → run
+    let countdownStart = 0;
+    let t = 0;
+    let a = 0; // 트랙 각도 (0 → 2π)
+    let speed = 0; // m/s
+    let taps = 0;
+    let lastTap = 0;
+    let stamina = 1;
+    const tapBtn = el('button', 'run-tap', '👟 달려!');
+    tapBtn.type = 'button';
+    document.body.append(tapBtn);
+    const onTap = (e) => {
+      e.preventDefault();
+      if (phase !== 'run') return;
+      const now = performance.now();
+      // 너무 빠른 연타(자동 클릭)는 무시
+      if (now - lastTap < 60) return;
+      lastTap = now;
+      taps++;
+      speed = Math.min(9.5, speed + 1.1 * (0.6 + 0.4 * stamina));
+      stamina = Math.max(0.35, stamina - 0.006);
+      tapBtn.classList.add('hit');
+      setTimeout(() => tapBtn.classList.remove('hit'), 80);
+    };
+    tapBtn.addEventListener('pointerdown', onTap);
+    hint('초록 깃발에 서면 카운트다운! 그다음은 버튼을 빠르게 연타해서 한 바퀴', 3500);
+    const finish = () => {
+      const b = best('run');
+      const rec = !b || t < b;
+      if (rec) setBest('run', t);
+      me.say(rec ? '신기록이다! 🏃' : '휴, 다 뛰었다~');
+      me.showEmoji('💦', 3);
+      onAct?.('run', Math.round(t * 100) / 100);
+      const tps = (taps / t).toFixed(1);
+      showResult('달리기 완주!', [`기록 <b>${mmss(t)}</b>`, `연타 ${taps}번 (초당 ${tps}번)`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${mmss(b)}`, hallLine('run', Math.round(t * 100) / 100)], '🏃');
+      stopGame();
+    };
     startGame({
       name: 'run',
       update(dt) {
-        if (!started) {
-          if (!startPos()) {
-            hudText.textContent = '🏃 초록 깃발로 가세요';
-            return;
-          }
-          if (!countdownStart) countdownStart = performance.now();
-          const countdown = 3 - (performance.now() - countdownStart) / 1000;
-          hudText.textContent = countdown > 0 ? `🏃 ${Math.ceil(countdown)}…` : '🏃 출발!';
-          if (countdown <= 0) {
-            started = true;
-            ambience.ding();
+        if (phase === 'go') {
+          hudText.textContent = '🏃 초록 깃발로 가세요';
+          if (startPos()) {
+            phase = 'count';
+            countdownStart = performance.now();
+            me.target = null;
+            me.path = [];
+            me.forceMove = true;
+            me.pos.x = start.x;
+            me.pos.z = start.z;
           }
           return;
         }
-        t += dt;
-        const target = TRACK[next % TRACK.length];
-        if (Math.hypot(me.pos.x - target.x, me.pos.z - target.z) < 2.5) {
-          flags[next % TRACK.length].visible = false;
-          next++;
-          ambience.ding();
-          if (next > TRACK.length) {
-            const b = best('run');
-            const rec = !b || t < b;
-            if (rec) setBest('run', t);
-            me.say(rec ? '신기록이다! 🏃' : '휴, 다 뛰었다~');
-            onAct?.('run', Math.round(t * 100) / 100);
-            showResult('달리기 완주!', [`기록 <b>${mmss(t)}</b>`, rec ? '🏅 내 최고 기록 경신!' : `최고 기록 ${mmss(b)}`, hallLine('run', Math.round(t * 100) / 100)], '🏃');
-            stopGame();
-            return;
+        if (phase === 'count') {
+          const countdown = 3 - (performance.now() - countdownStart) / 1000;
+          hudText.textContent = countdown > 0 ? `🏃 ${Math.ceil(countdown)}… 준비!` : '🏃 출발!';
+          me.faceAngle(Math.PI / 2, dt * 4); // 트랙 방향(동쪽)을 봄
+          if (countdown <= 0) {
+            phase = 'run';
+            tapBtn.classList.add('show');
+            ambience.ding();
+            hint('연타! 연타!', 1200);
           }
+          return;
         }
-        hudText.textContent = `🏃 ${mmss(t)} · ${next}/${TRACK.length} 깃발`;
+        // 달리는 중: 연타로 속도 올리고, 안 누르면 서서히 느려짐
+        t += dt;
+        speed = Math.max(0, speed - dt * (2.2 + speed * 0.25));
+        me.forceMove = speed > 0.3;
+        me.runSpeed = speed / 4; // 걷기 애니메이션 빠르기
+        // 타원 둘레를 따라 각도 전진 (현재 위치의 접선 길이로 환산)
+        const dxda = Math.cos(a) * RX;
+        const dzda = Math.sin(a) * RZ;
+        const perRad = Math.hypot(dxda, dzda) || 1;
+        a += (speed * dt) / perRad;
+        const pt = trackAt(a);
+        me.pos.x = pt.x;
+        me.pos.z = pt.z;
+        me.faceAngle(Math.atan2(dxda, dzda), dt * 8);
+        const lap = Math.min(1, a / (Math.PI * 2));
+        for (let q = 1; q < 4; q++) if (a > (q * Math.PI) / 2 && flags[q].visible) {
+          flags[q].visible = false;
+          ambience.ding();
+        }
+        hudText.textContent = `🏃 ${mmss(t)} · ${(lap * 100).toFixed(0)}% · ${speed.toFixed(1)}m/s`;
+        if (a >= Math.PI * 2) finish();
       },
       stop() {
-        me.speedMul = 1;
+        me.forceMove = false;
+        me.runSpeed = 0;
+        tapBtn.remove();
         for (const f of flags) scene.remove(f);
       },
     });

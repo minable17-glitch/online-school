@@ -453,3 +453,27 @@ button { font: inherit; cursor: pointer; }
 .hall-list .hn { flex: 1; font-weight: 600; color: #222; }
 .hall-list .hv { color: #d67828; font-weight: 700; }
 .hall-empty { color: #777; font-size: 14px; }
+
+/* 달리기 연타 버튼 */
+.run-tap {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 118px);
+  width: min(70vw, 260px);
+  height: 92px;
+  border: 4px solid #fff;
+  border-radius: 999px;
+  background: #e8584f;
+  color: #fff;
+  font-size: 26px;
+  font-weight: 800;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.3);
+  display: none;
+  z-index: 16;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.run-tap.show { display: block; }
+.run-tap.hit { transform: translateX(-50%) scale(0.92); background: #ffb347; }
