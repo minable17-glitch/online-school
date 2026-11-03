@@ -1150,6 +1150,91 @@ document.getElementById('roomBadge').addEventListener('click', () => {
 // ── 입장 화면 ──
 const intro = document.getElementById('intro');
 const nameInput = document.getElementById('nameInput');
+// ── 장소 이동: 목록에서 누르면 거기까지 자동으로 걸어감 (층·계단·건물 사이 길찾기 포함) ──
+{
+  const sheet = document.getElementById('placeSheet');
+  const list = document.getElementById('placeList');
+  const L0 = levelY(0);
+  const SECTIONS = [
+    ['밖 · 운동장', [
+      ['🏫', '중앙현관 앞', 0, 0, 6, 0],
+      ['🚪', '교문', 66, 0, 8.5, 0],
+      ['🛣️', '등굣길', 80, 0, 10, 0],
+      ['⚽', '운동장 가운데', 0, FIELD_Y, 41, 0],
+      ['📣', '구령대 앞', 0, 0, 17.5, 0],
+      ['🏆', '명예의 전당', -45, FIELD_Y, 20, 0],
+      ['🦘', '멀리뛰기', 60, FIELD_Y, 21, 0],
+      ['🏀', '야외 농구장', 58, FIELD_Y, 58, 0],
+      ['🪢', '그네·정글짐', 52, FIELD_Y, 40, 0],
+      ['🌳', '등나무 쉼터', -39, 0, 7, 0],
+      ['🗿', '동상', 0, 0, 9, 0],
+    ]],
+    ['뒷마당', [
+      ['🏪', '매점', (STORE.minX + STORE.maxX) / 2, 0, STORE.maxZ + 1.5, 0],
+      ['🥬', '텃밭', -54, 0, -34.5, 0],
+      ['🚲', '자전거 보관대', -26, 0, -20, 0],
+      ['🏸', '배드민턴장', 58, 0, -28, 0],
+      ['🚗', '주차장', 58, 0, -8, 0],
+      ['🚰', '수돗가', -56, 0, -3, 0],
+    ]],
+    ['급식실 · 강당', [
+      ['🍚', '급식실', 21.5, 0.15, -27, 0],
+      ['🏟️', '강당', 21, levelY(1), -24, 1],
+    ]],
+    ['1층', [
+      ['🏛️', '중앙현관 로비', 0, L0, -4, 0],
+      ['🚻', '1층 화장실(남)', -44, L0, -16, 0],
+      ['🚻', '1층 화장실(여)', 44, L0, -16, 0],
+    ]],
+    ['2층', [['🚻', '2층 화장실(남)', -44, levelY(1), -16, 1], ['🚻', '2층 화장실(여)', 44, levelY(1), -16, 1]]],
+    ['3층', [['🚻', '3층 화장실(남)', -44, levelY(2), -16, 2], ['🚻', '3층 화장실(여)', 44, levelY(2), -16, 2]]],
+    ['옥상', [
+      ['🌤️', '옥상', 0, levelY(ROOF), -6, ROOF],
+      ['🐤', '닭장', 30, levelY(ROOF), -3.5, ROOF],
+      ['🍚', '비빔밥 자리', -30, levelY(ROOF), -3.5, ROOF],
+    ]],
+  ];
+  // 교실·특별실·사무실은 CLASSROOMS 에서 층별로
+  const roomIcon = (t) => ({ class: '📚', science: '🔬', art: '🎨', computer: '💻', broadcast: '📻', music: '🎹', av: '📽️', homeec: '🧵', council: '🗳️', principal: '🏫', admin: '🗂️', staff: '👩‍🏫', nurse: '🩺', counsel: '💬', library: '📖', english: '🔤' })[t] || '🏫';
+  for (let k = 0; k < 3; k++) {
+    const sec = SECTIONS.find((s) => s[0] === `${k + 1}층`);
+    const rooms = CLASSROOMS.filter((r) => r.level === k);
+    for (const r of rooms) sec[1].push([roomIcon(r.type), r.name, r.type === 'counsel' || r.type === 'library' ? (r.xs + r.xe) / 2 : r.xs + 1.45, levelY(k), r.type === 'counsel' ? -2 : r.type === 'library' ? Z_CORR + 0.6 : Z_CORR + 0.5, k]); // 교실은 앞문 바로 안쪽
+    // 화장실은 뒤로
+    sec[1].sort((a, b) => (a[1].includes('화장실') ? 1 : 0) - (b[1].includes('화장실') ? 1 : 0));
+  }
+  const render = () => {
+    list.innerHTML = '';
+    for (const [title, items] of SECTIONS) {
+      list.append(Object.assign(document.createElement('div'), { className: 'place-sec', textContent: title }));
+      const grid = document.createElement('div');
+      grid.className = 'place-grid';
+      for (const [icon, name, x, y, z, lvl] of items) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = `<span>${icon}</span>${name}`;
+        if (whereText === name) b.classList.add('here');
+        b.addEventListener('click', () => {
+          sheet.classList.add('hidden');
+          unlockAudio();
+          if (me.sitChairIndex != null) standUp(me);
+          const ok = goTo({ x, y, z }, lvl);
+          if (ok !== undefined) return;
+          hint(`${icon} ${name}(으)로 가요`, 1800);
+        });
+        grid.append(b);
+      }
+      list.append(grid);
+    }
+  };
+  document.getElementById('placeBtn').addEventListener('click', () => {
+    render();
+    sheet.classList.remove('hidden');
+  });
+  document.getElementById('placeClose').addEventListener('click', () => sheet.classList.add('hidden'));
+  sheet.addEventListener('click', (e) => e.target === sheet && sheet.classList.add('hidden'));
+}
+
 // ── 방(서버) 바꾸기: 처음엔 자동 배정(우리학교), 들어온 뒤 원하는 방으로 이동 ──
 {
   const sheet = document.getElementById('roomSheet');

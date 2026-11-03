@@ -550,3 +550,24 @@ button { font: inherit; cursor: pointer; }
 .bibim-list .ok { grid-row: 1 / 3; color: #3f7e4e; font-weight: 800; }
 .bibim-list li.have { background: #f3fbf1; }
 .bibim-list li.have small { color: #3f7e4e; }
+
+/* ── 장소 이동 ── */
+.place-card { max-height: 72vh; overflow-y: auto; text-align: left; }
+.place-card h2, .place-card > p { text-align: center; }
+.place-sec { font-size: 12.5px; color: #777; margin: 10px 0 6px; font-weight: 600; }
+.place-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.place-grid button {
+  border: 1px solid #e6dcc6;
+  background: #fff;
+  border-radius: 12px;
+  padding: 9px 4px;
+  font-size: 13px;
+  color: #222;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.place-grid button span { font-size: 20px; }
+.place-grid button:active { background: #f3ead6; }
+.place-grid button.here { background: #fff5dc; border-color: #d67828; }

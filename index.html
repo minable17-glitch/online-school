@@ -26,6 +26,7 @@
         <button class="pill" id="soundBtn" type="button">🔊 주변 소리</button>
         <button class="pill" id="lookBtn" type="button">👕 꾸미기</button>
         <button class="pill" id="roomBtn" type="button">🔀 방 바꾸기</button>
+        <button class="pill" id="placeBtn" type="button">📍 장소 이동</button>
       </div>
     </div>
 
@@ -47,6 +48,16 @@
         <p>뭐 먹을래? 골라 보렴~</p>
         <div class="menu" id="shopMenu"></div>
         <button type="button" class="close" id="shopClose">닫기</button>
+      </div>
+    </div>
+
+    <!-- 장소 이동 -->
+    <div class="sheet hidden" id="placeSheet">
+      <div class="sheet-card place-card">
+        <h2>📍 장소 이동</h2>
+        <p>누르면 그곳까지 알아서 걸어가요</p>
+        <div id="placeList"></div>
+        <button type="button" class="close" id="placeClose">닫기</button>
       </div>
     </div>
 

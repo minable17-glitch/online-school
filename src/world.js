@@ -3095,8 +3095,11 @@ export function buildWorld(scene, { menu = [] } = {}) {
     for (let i = 0; i < 4; i++) B.box('deskTop', 'deco', A.minX + 3.0 - i * 0.05, A.minX + 3.8 + i * 0.05, L1 + 0.25 * i, L1 + 0.25 * i + 0.03, -22.4 - i * 0.03, -21.6 + i * 0.03);
     block(1, A.minX + 0.4, A.minX + 4.0, -23.2, -21.0);
     // 2층 강당은 구름다리 말고는 바깥과 이어지지 않음 (길찾기)
-    block(1, -BX, BRIDGE.minX, A.maxZ, Z_BACK);
-    block(1, BRIDGE.maxX, BX, A.maxZ, Z_BACK);
+    // (양끝 화장실 자리 x: ±(BX-7)~±BX, z: Z_BACK-5.2~Z_BACK 는 비워 둠)
+    block(1, -BX + 7, BRIDGE.minX, A.maxZ, Z_BACK);
+    block(1, BRIDGE.maxX, BX - 7, A.maxZ, Z_BACK);
+    block(1, -BX, -BX + 7, A.maxZ, Z_BACK - 5.2);
+    block(1, BX - 7, BX, A.maxZ, Z_BACK - 5.2);
     block(1, -BX, A.minX, A.minZ - 0.5, A.maxZ);
     block(1, A.maxX, BX, A.minZ - 0.5, A.maxZ);
   }
