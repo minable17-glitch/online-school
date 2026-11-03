@@ -119,12 +119,11 @@ export function createEvents({ scene }) {
 
   let kind = null;
   // 0.3초마다
+  // 교문지도 선생님·선도부와 교문 밖 노점은 시간에 상관없이 항상 있음
   function sync(period) {
-    if (period.kind === kind) return;
+    if (kind !== null) return;
     kind = period.kind;
-    for (const id of [...npcs.keys()]) despawn(id);
-    const list = kind === 'morning' ? MORNING : kind === 'after' ? AFTER : [];
-    for (const spec of list) spawn(spec);
+    for (const spec of [...MORNING, ...AFTER]) spawn(spec);
   }
 
   // 매 프레임
