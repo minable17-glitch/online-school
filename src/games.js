@@ -20,7 +20,7 @@ const el = (tag, cls, html) => {
 };
 const mmss = (sec) => `${Math.floor(sec / 60)}:${String((sec % 60).toFixed(2)).padStart(5, '0')}`;
 
-export function createGames({ scene, me, world, store, hint, getAmbience, onAct, isTeacher, hall, party, others }) {
+export function createGames({ scene, me, world, store, hint, getAmbience, onAct, isTeacher, hall, party, others, bibim }) {
   // 같이 할 때 모두 같은 흐름이 되도록 seed 로 고정된 난수
   const seeded = (seed) => {
     let s = (seed >>> 0) || 1;
@@ -699,8 +699,12 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
   }
   function collectEggs() {
     const c = loadCoop();
-    if (!c.eggs) return hint('아직 계란이 없어요', 1800);
-    showResult('계란 바구니', [`지금까지 모은 계란 <b>${c.eggs}개</b>`, '나중에 옥상 비빔밥 재료로 써요 🍚'], '🥚');
+    if (!c.eggs) return hint('아직 계란이 없어요. 모이를 준 다 자란 닭이 다음 날 낳아요', 2500);
+    const n = c.eggs;
+    c.eggs = 0;
+    saveCoop(c);
+    rebuildCoop();
+    bibim?.takeEgg(n);
   }
 
   // ════════════════════════════════════════════════
@@ -943,9 +947,10 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
     if (nearGateIn() || me.pos.x > OUT.wall) g.push({ icon: '🕵️', name: '몰래 들어가기', desc: `선도부 시야 피해 현관까지 · 기록 대결${best('sneak') ? ` · 최고 ${best('sneak')}점` : ''}`, start: startSneak });
     if (hall?.nearBoard(me.pos)) g.push({ icon: '🏆', name: '명예의 전당', desc: '친구들 최고 기록 보기', start: () => hall.open('run') });
     g.push({ icon: '🗺️', name: '보물찾기 힌트', desc: `오늘의 쪽지 ${ensureTreasure().found.size}/3`, start: startTreasure });
+    if (bibim && me.pos.y < 1 && me.pos.x > -65 && me.pos.x < -43 && me.pos.z > -44.5 && me.pos.z < -34) g.push({ icon: '🥬', name: '상추 따기', desc: '텃밭 · 하루 2번 · 비빔밥 재료', start: () => bibim.pickLettuce() });
     if (onRoof() && nearCoop()) {
       g.push({ icon: '🌾', name: '모이 주기', desc: '옥상 닭장 병아리에게', start: feedCoop });
-      g.push({ icon: '🥚', name: '계란 바구니', desc: '모은 계란 보기', start: collectEggs });
+      g.push({ icon: '🥚', name: '계란 꺼내기', desc: `닭장에 계란 ${loadCoop().eggs}개 · 비빔밥 재료`, start: collectEggs });
     }
     return g;
   }
@@ -969,7 +974,7 @@ export function createGames({ scene, me, world, store, hint, getAmbience, onAct,
         tickCoop();
         const canPlay = !active && !isTeacher && !party?.active() && available().length > 0;
         playBtn.classList.toggle('hidden', !canPlay);
-        if (canPlay) playBtn.textContent = hall?.nearBoard(me.pos) ? '🏆 명예의 전당' : onRoof() && nearCoop() ? '🐤 닭장' : nearGateIn() || me.pos.x > OUT.wall ? '🕵️ 놀이하기' : onField() ? '🎲 운동장 놀이' : '🗺️ 보물찾기';
+        if (canPlay) playBtn.textContent = hall?.nearBoard(me.pos) ? '🏆 명예의 전당' : bibim && me.pos.y < 1 && me.pos.x > -65 && me.pos.x < -43 && me.pos.z > -44.5 && me.pos.z < -34 ? '🥬 텃밭' : onRoof() && nearCoop() ? '🐤 닭장' : nearGateIn() || me.pos.x > OUT.wall ? '🕵️ 놀이하기' : onField() ? '🎲 운동장 놀이' : '🗺️ 보물찾기';
       }
       // 닭 꼬물거림
       const now = performance.now() / 1000;

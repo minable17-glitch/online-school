@@ -19,6 +19,7 @@ import { createActivities } from './activities.js';
 import { createGames } from './games.js';
 import { createHall } from './hall.js';
 import { createParty } from './party.js';
+import { createBibimbap } from './bibimbap.js';
 import { createAmbience } from './ambience.js';
 
 const params = new URLSearchParams(location.search);
@@ -148,11 +149,14 @@ const activities = createActivities({
 const hall = createHall({ scene, store, send: (e, p) => net.send(e, p), myId, myName: () => myName });
 // 같이 하기 (놀이 방)
 const party = createParty({ me, myId, myName: () => myName, others, send: (e, p) => net.send(e, p), hint, onStart: (game, opts) => games.startParty(game, opts) });
+// 옥상 비빔밥 (재료 모으기)
+const bibim = createBibimbap({ scene, me, store, hint, getAmbience: () => ambience, send: (e, p) => net.send(e, p), others });
 // 운동장·교문·보물·닭장 놀이
 const games = createGames({
   hall,
   party,
   others,
+  bibim,
   scene,
   me,
   world,
@@ -448,6 +452,8 @@ function onAction(a) {
   } else if (a.type === 'art') {
     o.avatar.showEmoji('🎨', 8);
     o.avatar.say('그림 완성!');
+  } else if (a.type === 'bibim') {
+    bibim.receive(a, o.avatar);
   } else if (a.type === 'game2') {
     const names = { run: '운동장 한 바퀴', jump: '멀리뛰기', sneak: '몰래 들어가기', treasure: '보물찾기', tag: '얼음땡', dodge: '피구' };
     o.avatar.say(`${names[a.kind] || '놀이'} ${a.kind === 'run' ? `${a.score}초` : a.kind === 'jump' ? `${a.score}m` : a.kind === 'treasure' ? '다 찾음!' : `${a.score | 0}점`}!`);
@@ -652,6 +658,24 @@ function sitAt(idx) {
     announce();
   } else hint('그 자리로 갈 수 없어요');
 }
+
+// ── 가정 선생님께 고추장 받기 (가정실, 수업 시간) ──
+const gochuBtn = document.createElement('button');
+gochuBtn.type = 'button';
+gochuBtn.className = 'pill shop-btn gochu-btn hidden';
+gochuBtn.textContent = '🌶️ 고추장 받기';
+document.body.append(gochuBtn);
+let gochuTeacher = null;
+function updateGochuBtn() {
+  const r = roomAt(me.pos.x, me.pos.z, me.pos.y);
+  gochuTeacher = r?.type === 'homeec' ? teachers.nearTeacher('가정', r.id) : null;
+  const near = gochuTeacher && Math.hypot(gochuTeacher.pos.x - me.pos.x, gochuTeacher.pos.z - me.pos.z) < 3.5;
+  gochuBtn.classList.toggle('hidden', !near);
+}
+gochuBtn.addEventListener('click', () => {
+  unlockAudio();
+  if (gochuTeacher) bibim.askGochujang(gochuTeacher);
+});
 
 // ── 방과 후 노점 버튼 ──
 const vendorBtn = document.getElementById('vendorBtn');
@@ -949,6 +973,18 @@ SNACKS.forEach(([emoji, name], i) => {
   });
   shopMenu.appendChild(btn);
 });
+{
+  // 양푼 (비빔밥 재료, 한 번만)
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.innerHTML = '<span>🥣</span>양푼 500원';
+  btn.addEventListener('click', () => {
+    shopSheet.classList.add('hidden');
+    npc.say(bibim.count('bowl') ? '양푼은 하나면 되지~' : '옥상에서 비빔밥 해 먹게? 조심해서 써~');
+    bibim.buyBowl();
+  });
+  shopMenu.appendChild(btn);
+}
 shopBtn.addEventListener('click', () => {
   unlockAudio();
   shopSheet.classList.remove('hidden');
@@ -988,6 +1024,7 @@ mealBtn.addEventListener('click', () => {
   me.say('잘 먹겠습니다!');
   if (inCafeNow) cook.say(['맛있게 먹어라~', '남기지 말고~', '많이 먹어!'][Math.floor(Math.random() * 3)]);
   else hint('급식 당번이 식판에 담아 줬어요 🍚', 2500);
+  setTimeout(() => bibim.takeRice(), 2600);
   hint(`오늘의 급식: ${todayMenu().join(' · ')}`, 4000);
   net.send('act', { type: 'meal' });
 });
@@ -1297,6 +1334,7 @@ function frame() {
   events.update(dt, me, camera.position);
   activities.update(dt);
   games.update(dt);
+  bibim.update(dt);
   teachers.update(dt, me, roomAt(me.pos.x, me.pos.z, me.pos.y)?.id, camera.position);
   soccer.update(dt, me, !!me.target);
   {
@@ -1333,6 +1371,7 @@ function frame() {
     teachers.sync(me);
     events.sync(schoolNow());
     updateVendorBtn();
+    updateGochuBtn();
     activities.sync(roomAt(me.pos.x, me.pos.z, me.pos.y));
     scorePill.classList.toggle('hidden', lastWhere !== '운동장');
     ambience?.setMix(soundMix());

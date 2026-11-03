@@ -298,5 +298,10 @@ export function createTeachers({ scene, world }) {
     }
   }
 
-  return { sync, update, subjectOf: (room) => subjectOf(room, period) };
+  // 지금 내 근처(같은 교실)에 있는 과목 선생님 아바타
+  const nearTeacher = (sub, myRoomId) => {
+    for (const q of active.values()) if (q.sub === sub && q.room.id === myRoomId) return q.avatar;
+    return null;
+  };
+  return { sync, update, subjectOf: (room) => subjectOf(room, period), nearTeacher };
 }
