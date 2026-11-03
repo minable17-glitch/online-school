@@ -585,3 +585,36 @@ button { font: inherit; cursor: pointer; }
 .photo-actions button { border: 0; border-radius: 12px; padding: 12px 6px; font-size: 14.5px; font-weight: 600; background: #e9e1cf; color: #333; }
 .photo-actions .photo-main { background: #3f7e4e; color: #fff; }
 body.shooting .top, body.shooting .actions, body.shooting .shop-btn, body.shooting .sit-btn, body.shooting .stair-bar, body.shooting .hint, body.shooting .game-hud, body.shooting .bibim-pill { visibility: hidden; }
+
+/* ── 위쪽 메뉴 (아이콘 3개 + ☰ 펼침) ── */
+.quick-bar { display: flex; gap: 6px; }
+.icon-btn { width: 52px; height: 52px; padding: 0; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.icon-btn span { font-size: 20px; line-height: 1; }
+.icon-btn small { font-size: 10.5px; opacity: 0.9; }
+.icon-btn.on { background: rgba(63, 126, 78, 0.92); }
+.menu-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px;
+  width: 220px;
+  border-radius: 18px;
+  background: rgba(30, 32, 28, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.menu-panel button {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 13.5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.menu-panel button span { font-size: 20px; }
+.menu-panel button:active { background: rgba(255, 255, 255, 0.25); }

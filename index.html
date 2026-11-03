@@ -28,12 +28,17 @@
         <div class="pill score hidden" id="scorePill">⚽ 청팀 <b id="scoreBlue">0</b> : <b id="scoreWhite">0</b> 백팀</div>
       </div>
       <div class="top-right">
-        <button class="pill" id="bellBtn" type="button">종소리 듣기</button>
-        <button class="pill" id="soundBtn" type="button">🔊 주변 소리</button>
-        <button class="pill" id="lookBtn" type="button">👕 꾸미기</button>
-        <button class="pill" id="roomBtn" type="button">🔀 방 바꾸기</button>
-        <button class="pill" id="placeBtn" type="button">📍 장소 이동</button>
-        <button class="pill" id="photoBtn" type="button">📷 사진 찍기</button>
+        <div class="quick-bar">
+          <button class="pill icon-btn" id="photoBtn" type="button" aria-label="사진 찍기"><span>📷</span><small>사진</small></button>
+          <button class="pill icon-btn" id="placeBtn" type="button" aria-label="장소 이동"><span>📍</span><small>이동</small></button>
+          <button class="pill icon-btn" id="menuBtn" type="button" aria-label="메뉴"><span>☰</span><small>메뉴</small></button>
+        </div>
+        <div class="menu-panel hidden" id="menuPanel">
+          <button id="lookBtn" type="button"><span>👕</span>꾸미기</button>
+          <button id="roomBtn" type="button"><span>🔀</span>방 바꾸기</button>
+          <button id="soundBtn" type="button">🔊 주변 소리</button>
+          <button id="bellBtn" type="button">🔔 종소리 듣기</button>
+        </div>
       </div>
     </div>
 

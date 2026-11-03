@@ -17,6 +17,7 @@
 - 운동장은 한 단 낮은 땅(줄무늬 차양 관람석), 구령대, 세종대왕·이순신 동상, 등나무 쉼터, 필로티 벤치
 - 뒷마당: 2000년대 매점(주판·쇠 돈통·컵라면 온수기·"학생 외상 절대 사절"), 텃밭, 비닐하우스, 분리수거장, 소각장, 보일러실, 하역장
 - 교문(철제 미닫이·벽돌 기둥) 밖 등굣길: 횡단보도, 문방구·분식집, 병아리 아저씨·떡볶이·뽑기
+- 학생 NPC 20명: 시간표대로 등교 → 수업 시간엔 자기 반 자리에 앉고, 쉬는 시간엔 복도에서 수다·뛰어다니기, 점심엔 급식실·운동장, 방과 후엔 하교
 - 사람들: 과목별 선생님(수업 시간에 교실에), 교문지도 선생님·선도부·벌 서는 학생, 체육 선생님, 청소 아주머니, 경비 아저씨, 축구부, 주번 등
 
 **2. 진짜 학교처럼 흘러가는 하루**
@@ -40,6 +41,7 @@
 - 말하기(말풍선), 손들기·인사·박수, 놀이 초대 → 대기방 → 동시 시작 → 순위표
 
 **5. 쉽게**
+- 위쪽 메뉴: 📷 사진 · 📍 이동 · ☰ 메뉴(꾸미기·방 바꾸기·주변 소리·종소리)
 - 📍 장소 이동: 55곳 중 누르면 계단·건물 사이를 알아서 걸어감
 - 👕 꾸미기: 성별(여학생 치마·세일러 깃·리본 / 남학생 바지·넥타이), 교복·세일러복·체육복, 머리 10종, 머리핀·머리띠·안경·모자, 책가방, 가슴 명찰에 이름
 - 📲 앱 설치(PWA): 안드로이드·PC는 첫 화면 설치 버튼, 아이폰은 공유 → 홈 화면에 추가. 전체 화면, 두 번째부터 빠르게 열림
@@ -59,7 +61,7 @@
 ## 기술 요약 (개발 이어서 할 사람용)
 - Vite + Three.js (순수 JS), GitHub Pages 자동 배포(`.github/workflows/deploy.yml`, `GH_PAGES=1 npm run build`)
 - 실시간: Supabase Realtime 브로드캐스트/프레즌스 (DB 테이블 없음). URL·publishable 키는 deploy.yml 기본값 (저장소 Variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 로 바꿀 수 있음)
-- 주요 파일: `src/world.js`(학교 전체 3D), `src/main.js`(입력·카메라·UI·네트워크 연결), `src/avatar.js`, `src/teachers.js`, `src/events.js`(교문·노점·돌아다니는 NPC), `src/games.js`(놀이), `src/party.js`(같이 하기), `src/hall.js`(명예의 전당), `src/bibimbap.js`, `src/activities.js`(미술·피아노·블록), `src/schedule.js`(시간표), `src/net.js`, `public/sounds/`(배경음 `sounds.json`), `public/sw.js`·`manifest.webmanifest`(PWA)
+- 주요 파일: `src/world.js`(학교 전체 3D), `src/main.js`(입력·카메라·UI·네트워크 연결), `src/avatar.js`, `src/teachers.js`, `src/events.js`(교문·노점·돌아다니는 NPC), `src/students.js`(시간표대로 움직이는 학생 NPC, `?students=N` 으로 인원 조절), `src/games.js`(놀이), `src/party.js`(같이 하기), `src/hall.js`(명예의 전당), `src/bibimbap.js`, `src/activities.js`(미술·피아노·블록), `src/schedule.js`(시간표), `src/net.js`, `public/sounds/`(배경음 `sounds.json`), `public/sw.js`·`manifest.webmanifest`(PWA)
 - 점검용 주소: `?debug=1&time=14` (게임 속 하루 중 14분째로)
 - **주의**: 이 프로젝트는 별도 저장소 `online-school`. 같은 계정의 **새싹책방(Mingit1)** 앱과 완전히 분리되어 있고, 그쪽은 절대 건드리지 않기로 함
 

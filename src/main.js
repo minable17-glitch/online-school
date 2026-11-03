@@ -20,6 +20,7 @@ import { createGames } from './games.js';
 import { createHall } from './hall.js';
 import { createParty } from './party.js';
 import { createBibimbap } from './bibimbap.js';
+import { createStudents } from './students.js';
 import { createAmbience } from './ambience.js';
 
 const params = new URLSearchParams(location.search);
@@ -254,10 +255,14 @@ function distVolumeXZ(p) {
 }
 let myBaskets = 0;
 
-function chairTakenBy(index) {
+function playerOnChair(index) {
   if (me.sitChairIndex === index) return me;
   for (const { avatar } of others.values()) if (avatar.sitChairIndex === index) return avatar;
   return null;
+}
+let students = null; // 학생 NPC (아래에서 만듦)
+function chairTakenBy(index) {
+  return playerOnChair(index) || students?.holder(index) || null;
 }
 
 function sitOn(avatar, index) {
@@ -839,10 +844,10 @@ bellBtn.addEventListener('click', () => {
   if (stopBell) {
     stopBell();
     stopBell = null;
-    bellBtn.textContent = '종소리 듣기';
+    bellBtn.textContent = '🔔 종소리 듣기';
   } else {
     stopBell = playSchoolBell(true);
-    bellBtn.textContent = '종소리 멈추기';
+    bellBtn.textContent = '🔕 종소리 멈추기';
   }
 });
 
@@ -1423,6 +1428,7 @@ function frame() {
   games.update(dt);
   bibim.update(dt);
   teachers.update(dt, me, roomAt(me.pos.x, me.pos.z, me.pos.y)?.id, camera.position);
+  students?.update(dt, me, camera.position);
   soccer.update(dt, me, !!me.target);
   {
     const sitting = new Set();
@@ -1607,5 +1613,28 @@ if ('serviceWorker' in navigator && !DEBUG && location.hostname !== 'localhost')
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     hint('사진을 저장했어요 📷', 1800);
+  });
+}
+
+// ── 학생 NPC (시간표대로 등교·수업·쉬는 시간·점심·하교) ──
+students = createStudents({ scene, world, nav, walkTo, sitOn, standUp, chairTakenBy: playerOnChair, count: params.get('students') ? Number(params.get('students')) : 20 });
+
+// ── 위쪽 메뉴: 자주 쓰는 📷 📍 은 아이콘으로, 나머지는 ☰ 메뉴 안으로 ──
+{
+  const menuBtn = document.getElementById('menuBtn');
+  const panel = document.getElementById('menuPanel');
+  const close = () => {
+    panel.classList.add('hidden');
+    menuBtn.classList.remove('on');
+  };
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = panel.classList.toggle('hidden') === false;
+    menuBtn.classList.toggle('on', open);
+  });
+  // 메뉴 안 버튼을 누르면 메뉴는 닫힘 (소리 켜기/끄기는 결과가 보이게 잠깐 두었다가)
+  for (const b of panel.querySelectorAll('button')) b.addEventListener('click', () => setTimeout(close, b.id === 'soundBtn' || b.id === 'bellBtn' ? 600 : 0));
+  document.addEventListener('pointerdown', (e) => {
+    if (!panel.classList.contains('hidden') && !panel.contains(e.target) && e.target !== menuBtn) close();
   });
 }
