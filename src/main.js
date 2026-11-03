@@ -10,7 +10,7 @@ import { buildWorld, roomAt, CLASSROOMS, OFFICE_ROOMS, TEACHING, levelY, levelOf
 import { createSoccer } from './soccer.js';
 import { createTeachers, SUBJECTS } from './teachers.js';
 import { createEvents, TREATS } from './events.js';
-import { Avatar, AVATAR_SCALE, OUTFITS, HAIRS, HAIR_COLORS, ACCS, cleanLook, defaultLook } from './avatar.js';
+import { Avatar, AVATAR_SCALE, GENDERS, OUTFITS, HAIRS, HAIR_COLORS, ACCS, BAGS, cleanLook, defaultLook } from './avatar.js';
 import { schoolNow, todayMenu, setTestTime } from './schedule.js';
 import { createNavigator } from './pathfind.js';
 import { connectRoom } from './net.js';
@@ -1076,10 +1076,12 @@ const lookSheet = document.getElementById('lookSheet');
 const lookOptions = document.getElementById('lookOptions');
 const lookName = document.getElementById('lookName');
 const LOOK_SECTIONS = [
-  { key: 'outfit', title: '옷', list: OUTFITS, swatch: (o) => o.top },
+  { key: 'gender', title: '성별', list: GENDERS },
+  { key: 'outfit', title: '교복 · 체육복 (여학생은 치마, 남학생은 바지)', list: OUTFITS, swatch: (o) => o.top },
   { key: 'hair', title: '머리 모양', list: HAIRS },
   { key: 'hairColor', title: '머리 색', list: HAIR_COLORS, swatch: (o) => o.color },
-  { key: 'acc', title: '꾸미기', list: ACCS },
+  { key: 'acc', title: '머리 꾸미기', list: ACCS },
+  { key: 'bag', title: '책가방', list: BAGS, swatch: (o) => o.color || '#eee' },
 ];
 function renderLookOptions() {
   lookOptions.innerHTML = '';
